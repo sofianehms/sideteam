@@ -28731,6 +28731,7 @@ var configSchema = external_exports.strictObject({
   check: commandSchema.optional(),
   engines: external_exports.record(external_exports.string(), engineSchema),
   fallback: external_exports.array(external_exports.string()).optional(),
+  retries: external_exports.number().int().min(0).max(3).default(1),
   dataDir: external_exports.string().optional(),
   worktree: worktreeSchema,
   limits: limitsSchema
@@ -28950,7 +28951,7 @@ function framePrompt({
 
 // src/runs.ts
 import { randomUUID } from "node:crypto";
-import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 function runDir(dataDir2, id) {
   if (!id || id === "." || id === ".." || /[\\/:]/.test(id)) {
@@ -28958,14 +28959,25 @@ function runDir(dataDir2, id) {
   }
   return join(dataDir2, "runs", id);
 }
-async function createRunDir(dataDir2, id) {
-  const directory2 = runDir(dataDir2, id);
+var artifacts = ["prompt.md", "setup.log", "engine.log", "check.log"];
+function attemptDir(dataDir2, id, attempt) {
+  if (!Number.isSafeInteger(attempt) || attempt < 1) throw new Error("invalid attempt number");
+  return join(runDir(dataDir2, id), `attempt-${attempt}`);
+}
+async function createRunDir(dataDir2, id, attempt) {
+  const directory2 = attempt === void 0 ? runDir(dataDir2, id) : attemptDir(dataDir2, id, attempt);
   await mkdir(directory2, { recursive: true, mode: 448 });
-  for (const name5 of ["prompt.md", "setup.log", "engine.log", "check.log"]) {
+  for (const name5 of artifacts) {
     const file2 = await open(join(directory2, name5), "a", 384);
     await file2.close();
   }
   return directory2;
+}
+async function publishRunArtifacts(dataDir2, id, directory2) {
+  const destination = await createRunDir(dataDir2, id);
+  await Promise.all(
+    artifacts.map((name5) => copyFile(join(directory2, name5), join(destination, name5)))
+  );
 }
 async function readMeta(dataDir2, id) {
   try {
@@ -28995,6 +29007,7 @@ async function writeMeta(dataDir2, meta3) {
     startedAt: meta3.startedAt,
     durationMs: meta3.durationMs,
     tokens: meta3.tokens && { input: meta3.tokens.input, output: meta3.tokens.output },
+    attempts: meta3.attempts,
     files: meta3.files.map(({ path, added, deleted }) => ({ path, added, deleted })),
     check: meta3.check && { command: meta3.check.command, code: meta3.check.code }
   };
@@ -29062,13 +29075,18 @@ async function linkDependency(repoRoot, worktreePath, link) {
   await symlink(source, destination, type);
   return [...parts, name5].join("/");
 }
-async function createWorktree(repoRoot, id, { links }) {
+async function createWorktree(repoRoot, id, { links, base: revision = "HEAD" }) {
   if (!/^[a-z0-9_-]+$/i.test(id)) throw new Error(`Invalid worktree ID: ${id}`);
   const cwd = repoRoot;
-  const head = await git(["rev-parse", "--verify", "HEAD"], { cwd, allowFailure: true });
+  const head = await git(["rev-parse", "--verify", "--end-of-options", `${revision}^{commit}`], {
+    cwd,
+    allowFailure: true
+  });
   if (head.code !== 0) {
     await git(["rev-parse", "--git-dir"], { cwd });
-    throw new Error("repository has no commits");
+    throw new Error(
+      revision === "HEAD" ? "repository has no commits" : `invalid base revision: ${revision}`
+    );
   }
   const base2 = head.stdout.trim();
   const branch = `sideteam/${id}`;
@@ -29863,6 +29881,21 @@ async function runCommandIn(worktree, value, { timeoutMs, logFile, lines }) {
   return { passed: code === 0 && !timedOut, code, timedOut, durationMs, tail };
 }
 
+// src/fallback.ts
+function buildChain(selected, fallback = []) {
+  return [.../* @__PURE__ */ new Set([selected, ...fallback])];
+}
+function retryPrompt(prompt, checkTail) {
+  return [prompt, "", "Previous check output:", ...checkTail, "", "Fix the failing check."].join(
+    "\n"
+  );
+}
+function nextAction(status, attempt, retries, hasFallback) {
+  if (status === "success") return "stop";
+  if (status === "check_failed" && attempt <= retries) return "retry";
+  return hasFallback ? "fallback" : "stop";
+}
+
 // src/summary.ts
 function truncate(text, limit) {
   if (text.length <= limit) return text;
@@ -29877,9 +29910,10 @@ function renderSummary(outcome, limits) {
     `Next step: ${nextStep}`,
     `Raw log: ${logPath}`,
     `Engine: ${engine}${model ? ` | Model: ${model}` : ""} | Duration: ${durationMs} ms`,
-    ...reason ? [`Reason: ${reason}`] : [],
-    "Files:"
+    ...reason ? [`Reason: ${reason}`] : []
   ];
+  let attemptsLine = outcome.attempts?.length ? `Attempts: ${outcome.attempts.map(({ engine: engine2, attempt, status: status2 }) => `${engine2}#${attempt} ${status2}`).join(", ")}` : "";
+  const conclusion = attemptsLine && status !== "success" ? ["all engines failed; consider doing this task directly"] : [];
   const checkLabel = check2 ? `Check: ${typeof check2.command === "string" ? check2.command : JSON.stringify(check2.command)} (code: ${check2.code ?? "unavailable"})` : void 0;
   const diff = outcome.diff ? outcome.diff.replace(/\r?\n$/, "").split(/\r?\n/) : [];
   const tail = check2?.tail ?? [];
@@ -29896,13 +29930,16 @@ function renderSummary(outcome, limits) {
     const diffNote = diffCount < diff.length ? `[diff truncated: ${diffCount} of ${diff.length} lines; full diff: git diff ${base2}..sideteam/${id}]` : void 0;
     const text = [
       ...required2,
+      ...attemptsLine ? [attemptsLine] : [],
+      "Files:",
       ...fileLines.slice(0, fileCount),
       ...omittedFiles ? [`\u2026 and ${omittedFiles} more`] : [],
       ...checkLabel ? [checkLabel] : [],
       ...engineMessage ? [`Engine message: ${engineMessage}`] : [],
       ...checkCount ? ["Check output:", ...checkLines] : [],
       ...diffCount ? ["Diff:", ...diffLines] : [],
-      ...diffNote ? [diffNote] : []
+      ...diffNote ? [diffNote] : [],
+      ...conclusion
     ].join("\n");
     return { text, omittedFiles, checkLines, diffLines, diffNote };
   }
@@ -29924,6 +29961,11 @@ function renderSummary(outcome, limits) {
       const remaining = engineMessage.length - (rendered.text.length - cap);
       engineMessage = truncate(engineMessage, remaining);
     }
+    rendered = render();
+  }
+  if (rendered.text.length > cap && attemptsLine) {
+    const remaining = attemptsLine.length - (rendered.text.length - cap);
+    attemptsLine = truncate(attemptsLine, Math.max("Attempts: \u2026".length, remaining));
     rendered = render();
   }
   if (rendered.text.length > cap) {
@@ -29973,6 +30015,84 @@ async function contextFiles(root, files) {
     })
   );
 }
+async function runAttempt({
+  id,
+  repo,
+  worktree,
+  runDir: runDir2,
+  config: config2,
+  cfg,
+  command,
+  prompt,
+  timeoutMinutes,
+  prepare,
+  env
+}) {
+  const logPath = join5(runDir2, "engine.log");
+  const checkOptions = {
+    timeoutMs: config2.limits.checkTimeoutMinutes * 6e4,
+    lines: config2.limits.checkLines
+  };
+  let status = "engine_failed";
+  let reason = null;
+  let result;
+  let check2;
+  if (prepare && config2.worktree.setup !== void 0) {
+    const setup = await runCommandIn(worktree.path, config2.worktree.setup, {
+      ...checkOptions,
+      logFile: join5(runDir2, "setup.log"),
+      lines: 0
+    });
+    if (!setup.passed) reason = `worktree setup failed (exit ${setup.code})`;
+  }
+  if (reason === null) {
+    const promptFile = join5(runDir2, "prompt.md");
+    await writeFile2(promptFile, prompt);
+    try {
+      const adapter = getAdapter(cfg.adapter);
+      const cmd = adapter.buildCommand(
+        { id, prompt, promptFile, worktree: worktree.path, runDir: runDir2, model: cfg.model },
+        cfg
+      );
+      const raw = await run(
+        { ...cmd, env: buildEngineEnv(cfg.env ?? [], env) },
+        {
+          logFile: logPath,
+          timeoutMs: resolveTimeoutMinutes(timeoutMinutes, cfg, config2.limits) * 6e4
+        }
+      );
+      if (raw.timedOut) {
+        status = "timeout";
+        reason = "engine timed out";
+      }
+      result = adapter.parseResult({ ...raw, runDir: runDir2 });
+      reason ??= raw.spawnError ?? (result.ok ? null : result.error ?? "engine failed");
+    } catch (error48) {
+      reason ??= error48 instanceof Error ? error48.message : String(error48);
+    }
+  }
+  await commitAll(worktree.path, `Delegate ${id}`, { exclude: worktree.linked });
+  if (reason === null) {
+    const diff = await git(["diff", "--quiet", `${worktree.base}..${worktree.branch}`, "--"], {
+      cwd: repo,
+      allowFailure: true
+    });
+    if (diff.code === 0) {
+      reason = "no changes produced";
+    } else if (diff.code === 1) {
+      const checked = await runCommandIn(worktree.path, command, {
+        ...checkOptions,
+        logFile: join5(runDir2, "check.log")
+      });
+      check2 = { command, code: checked.code, tail: checked.tail };
+      status = checked.timedOut ? "timeout" : checked.passed ? "success" : "check_failed";
+      if (checked.timedOut) reason = "check timed out";
+    } else {
+      throw new Error(`could not inspect committed changes: ${diff.stderr.trim()}`);
+    }
+  }
+  return { status, reason, result, check: check2, logPath };
+}
 async function runDelegation(input, {
   onProgress,
   env = process.env
@@ -30001,8 +30121,8 @@ async function runDelegation(input, {
     if (!Object.hasOwn(config2.engines, engine)) {
       throw new Error(`unknown engine "${engine}": configured engines: ${names.join(", ")}`);
     }
-    const cfg = config2.engines[engine];
-    const adapter = getAdapter(cfg.adapter);
+    getAdapter(config2.engines[engine].adapter);
+    const chain = buildChain(engine, input.fallback === false ? void 0 : config2.fallback);
     const command = input.check ?? config2.check;
     if (command === void 0) {
       throw new Error("no check configured: pass check or set it in .sideteam.json");
@@ -30011,107 +30131,93 @@ async function runDelegation(input, {
     const files = await contextFiles(repo, input.files ?? []);
     const id = newId();
     const directory2 = dataDir(config2, { env });
-    const runDir2 = await createRunDir(directory2, id);
-    const worktree = await createWorktree(repo, id, { links: effectiveLinks(config2) });
-    const logPath = join5(runDir2, "engine.log");
-    const checkOptions = {
-      timeoutMs: config2.limits.checkTimeoutMinutes * 6e4,
-      lines: config2.limits.checkLines
-    };
-    let status = "engine_failed";
-    let reason = null;
-    let result;
-    let check2;
-    if (config2.worktree.setup !== void 0) {
-      const setup = await runCommandIn(worktree.path, config2.worktree.setup, {
-        ...checkOptions,
-        logFile: join5(runDir2, "setup.log"),
-        lines: 0
-      });
-      if (!setup.passed) reason = `worktree setup failed (exit ${setup.code})`;
-    }
-    if (reason === null) {
-      const prompt = framePrompt({ prompt: input.prompt, files, check: command });
-      const promptFile = join5(runDir2, "prompt.md");
-      await writeFile2(promptFile, prompt);
-      try {
-        const cmd = adapter.buildCommand(
-          { id, prompt, promptFile, worktree: worktree.path, runDir: runDir2, model: cfg.model },
-          cfg
-        );
-        const raw = await run(
-          { ...cmd, env: buildEngineEnv(cfg.env ?? [], env) },
-          {
-            logFile: logPath,
-            timeoutMs: resolveTimeoutMinutes(input.timeoutMinutes, cfg, config2.limits) * 6e4
-          }
-        );
-        if (raw.timedOut) {
-          status = "timeout";
-          reason = "engine timed out";
-        }
-        result = adapter.parseResult({ ...raw, runDir: runDir2 });
-        reason ??= raw.spawnError ?? (result.ok ? null : result.error ?? "engine failed");
-      } catch (error48) {
-        reason ??= error48 instanceof Error ? error48.message : String(error48);
-      }
-    }
-    await commitAll(worktree.path, `Delegate ${id}`, { exclude: worktree.linked });
-    if (reason === null) {
-      const diff = await git(["diff", "--quiet", `${worktree.base}..${worktree.branch}`, "--"], {
-        cwd: repo,
-        allowFailure: true
-      });
-      if (diff.code === 0) {
-        reason = "no changes produced";
-      } else if (diff.code === 1) {
-        const checked = await runCommandIn(worktree.path, command, {
-          ...checkOptions,
-          logFile: join5(runDir2, "check.log")
-        });
-        check2 = { command, code: checked.code, tail: checked.tail };
-        status = checked.passed ? "success" : "check_failed";
-        if (checked.timedOut) reason = "check timed out";
-      } else {
-        throw new Error(`could not inspect committed changes: ${diff.stderr.trim()}`);
-      }
-    }
-    const changed = await changes(repo, worktree.base, worktree.branch);
-    const durationMs = Date.now() - started;
-    await writeMeta(directory2, {
-      id,
-      repo,
-      base: worktree.base,
-      branch: worktree.branch,
-      worktree: worktree.path,
-      links: worktree.linked,
-      engine,
-      adapter: cfg.adapter,
-      model: cfg.model ?? null,
-      status,
-      reason,
-      startedAt,
-      durationMs,
-      tokens: result?.tokens ?? null,
-      files: changed.files,
-      check: check2 ? { command, code: check2.code } : null
-    });
-    return renderSummary(
-      {
+    const links = effectiveLinks(config2);
+    let worktree = await createWorktree(repo, id, { links });
+    const attempts = [];
+    const originalPrompt = framePrompt({ prompt: input.prompt, files, check: command });
+    let prompt = originalPrompt;
+    let engineIndex = 0;
+    let attempt = 1;
+    for (; ; ) {
+      const selected = chain[engineIndex];
+      const cfg = config2.engines[selected];
+      const attemptStarted = Date.now();
+      const runDir2 = await createRunDir(directory2, id, attempts.length + 1);
+      const { status, reason, result, check: check2, logPath } = await runAttempt({
         id,
-        engine,
+        repo,
+        worktree,
+        runDir: runDir2,
+        config: config2,
+        cfg,
+        command,
+        prompt,
+        timeoutMinutes: input.timeoutMinutes,
+        prepare: attempt === 1,
+        env
+      });
+      const tokens = result?.tokens ?? null;
+      attempts.push({
+        engine: selected,
+        attempt,
+        status,
+        reason,
+        durationMs: Date.now() - attemptStarted,
+        tokens
+      });
+      switch (nextAction(status, attempt, config2.retries, engineIndex + 1 < chain.length)) {
+        case "retry":
+          prompt = retryPrompt(originalPrompt, check2?.tail ?? []);
+          attempt++;
+          continue;
+        case "fallback":
+          await removeWorktree(repo, worktree, "force");
+          worktree = await createWorktree(repo, id, { links, base: worktree.base });
+          engineIndex++;
+          attempt = 1;
+          prompt = originalPrompt;
+          continue;
+      }
+      await publishRunArtifacts(directory2, id, runDir2);
+      const changed = await changes(repo, worktree.base, worktree.branch);
+      const durationMs = Date.now() - started;
+      await writeMeta(directory2, {
+        id,
+        repo,
+        base: worktree.base,
+        branch: worktree.branch,
+        worktree: worktree.path,
+        links: worktree.linked,
+        engine: selected,
+        adapter: cfg.adapter,
         model: cfg.model ?? null,
         status,
         reason,
+        startedAt,
         durationMs,
-        check: check2,
-        engineMessage: result?.message,
-        base: worktree.base,
-        logPath,
-        ...changed
-      },
-      config2.limits
-    );
+        tokens,
+        attempts,
+        files: changed.files,
+        check: check2 ? { command, code: check2.code } : null
+      });
+      return renderSummary(
+        {
+          id,
+          engine: selected,
+          model: cfg.model ?? null,
+          status,
+          reason,
+          durationMs,
+          check: check2,
+          engineMessage: result?.message,
+          base: worktree.base,
+          logPath,
+          attempts,
+          ...changed
+        },
+        config2.limits
+      );
+    }
   } finally {
     clearInterval(timer);
   }
@@ -30126,6 +30232,7 @@ function registerDelegate(server) {
       inputSchema: external_exports.object({
         prompt: external_exports.string().min(1),
         engine: external_exports.string().optional(),
+        fallback: external_exports.boolean().optional(),
         files: external_exports.array(external_exports.string()).optional(),
         check: external_exports.string().optional(),
         timeoutMinutes: external_exports.number().positive().max(240).optional()
