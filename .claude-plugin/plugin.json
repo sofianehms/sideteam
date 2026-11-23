@@ -1,0 +1,10 @@
+{
+  "name": "sideteam",
+  "version": "0.0.0",
+  "description": "Delegate coding tasks to configured engines and review their changes before applying them.",
+  "author": { "name": "sofianehms" },
+  "homepage": "https://github.com/sofianehms/sideteam#readme",
+  "repository": "https://github.com/sofianehms/sideteam",
+  "license": "MIT",
+  "keywords": ["delegation", "mcp", "worktrees"]
+}

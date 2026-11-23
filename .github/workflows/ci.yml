@@ -33,6 +33,25 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --global @anthropic-ai/claude-code@2.1.330
+      - name: Validate plugin
+        run: |
+          if claude plugin validate --help >/dev/null 2>&1; then
+            claude plugin validate --strict .
+          else
+            echo '::warning::The claude plugin validate command is unavailable.'
+          fi
+
   dist:
     if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest

@@ -1,0 +1,6 @@
+{
+  "name": "sideteam",
+  "description": "Marketplace for the sideteam plugin, which delegates coding tasks to other engines.",
+  "owner": { "name": "sofianehms" },
+  "plugins": [{ "name": "sideteam", "source": "./" }]
+}
