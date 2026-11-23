@@ -39,6 +39,7 @@ test("uses the exact defaults when both files are missing", () => {
   expect(load()).toEqual({
     config: {
       engines: {},
+      retries: 1,
       worktree: {},
       limits: {
         timeoutMinutes: 20,
@@ -90,6 +91,7 @@ test("replaces engine entries and arrays, and merges limits and worktree by key"
   writeConfig(globalFile, {
     engines: { runner: { adapter: "generic", command: ["global"] } },
     check: ["global"],
+    retries: 3,
     fallback: ["runner"],
     limits: { timeoutMinutes: 25, checkLines: 30 },
     worktree: { setup: "prepare", link: ["global"] },
@@ -97,6 +99,7 @@ test("replaces engine entries and arrays, and merges limits and worktree by key"
   writeConfig(projectFile, {
     engines: { runner: { adapter: "replacement" } },
     check: ["project"],
+    retries: 0,
     fallback: [],
     limits: { checkLines: 50 },
     worktree: { link: ["project"] },
@@ -105,6 +108,7 @@ test("replaces engine entries and arrays, and merges limits and worktree by key"
   expect(config.engines.runner).toEqual({ adapter: "replacement", privacy: "cloud" });
   expect(config.check).toEqual(["project"]);
   expect(config.fallback).toEqual([]);
+  expect(config.retries).toBe(0);
   expect(config.limits).toMatchObject({ timeoutMinutes: 25, checkLines: 50, diffLines: 150 });
   expect(config.worktree).toEqual({ setup: "prepare", link: ["project"] });
 });
@@ -124,6 +128,9 @@ test.each([
   [{ engines: { local: { adapter: "generic" } } }, "engines.local.command"],
   [{ default: "missing" }, "default"],
   [{ fallback: ["missing"] }, "fallback.0"],
+  [{ retries: -1 }, "retries"],
+  [{ retries: 4 }, "retries"],
+  [{ retries: 1.5 }, "retries"],
 ])("rejects invalid configuration %j at %s", (input, key) => {
   writeConfig(projectFile, input);
   expect(load).toThrow(ConfigError);
