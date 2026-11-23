@@ -1,0 +1,17 @@
+{
+  "id": "10-ts-cli-options",
+  "level": "hard",
+  "language": "ts",
+  "light": false,
+  "prompt": "Implement parseOptions(args) and add visible tests. Return { verbose, output, files }. Support -v and --verbose, -o PATH and --output PATH, and --output=PATH. Later output options win. Defaults are false, undefined, and an empty list. Preserve positional order, treat a lone dash as positional, and treat all tokens after -- as positional. Throw RangeError for unsupported flags or missing or empty output values. A separate output value may be a lone dash but may not otherwise start with a dash.",
+  "check": [
+    "node",
+    "--test",
+    "visible.test.ts"
+  ],
+  "hidden": [
+    "node",
+    "--test",
+    "hidden/hidden.test.ts"
+  ]
+}
