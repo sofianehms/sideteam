@@ -83,6 +83,7 @@ test("reduces the diff first and then drops the oldest check lines under the cha
   const check = { command: "npm test", code: 0, tail };
   const first = renderSummary({ ...outcome, diff, check }, limits);
   expect(first.text.length).toBeLessThanOrEqual(8000);
+  expect(first.structured.diff).not.toBe("");
   expect(first.structured.diff.split("\n").length).toBeLessThan(150);
   expect(first.structured.check?.tail).toEqual(tail.slice(-40));
 
@@ -95,4 +96,66 @@ test("reduces the diff first and then drops the oldest check lines under the cha
   expect(kept.length).toBeGreaterThan(0);
   expect(kept.length).toBeLessThan(40);
   expect(kept).toEqual(longTail.slice(-kept.length));
+});
+
+test.each([
+  "success",
+  "check_failed",
+  "engine_failed",
+  "timeout",
+] as const)("rejects an insufficient cap and accepts an exact fit for %s", (status) => {
+  const input = { ...outcome, status };
+  const { text } = renderSummary(input, limits);
+  expect(() => renderSummary(input, { ...limits, maxSummaryChars: 25 })).toThrow(RangeError);
+  expect(() => renderSummary(input, { ...limits, maxSummaryChars: text.length - 1 })).toThrow(
+    /too small for the required summary fields/,
+  );
+  expect(renderSummary(input, { ...limits, maxSummaryChars: text.length }).text).toBe(text);
+});
+
+test.each([
+  { command: "npm test", code: 2, label: "npm test (code: 2)" },
+  { command: ["npm", "test"], code: null, label: '["npm","test"] (code: unavailable)' },
+])("keeps required fields and reports the same files under pressure ($label)", (testCheck) => {
+  const files = Array.from({ length: 52 }, (_, index) => ({
+    path: `file-${index}-${"x".repeat(215)}`,
+    added: 3,
+    deleted: 2,
+  }));
+  const check = { command: testCheck.command, code: testCheck.code, tail: ["failed"] };
+  const { text, structured } = renderSummary(
+    { ...outcome, files, check, diff: "first\nsecond" },
+    { ...limits, diffLines: 1 },
+  );
+  const kept = structured.files.length;
+  expect(text.length).toBeLessThanOrEqual(8000);
+  expect(kept).toBeGreaterThan(0);
+  expect(kept).toBeLessThan(50);
+  expect(structured.files).toEqual(files.slice(0, kept));
+  expect(structured.omittedFiles).toBe(files.length - kept);
+  const fileList = structured.files.map(
+    ({ path, added, deleted }) => `${path} +${added} -${deleted}`,
+  );
+  expect(text).toContain(
+    ["Files:", ...fileList, `… and ${files.length - kept} more`, `Check: ${testCheck.label}`].join(
+      "\n",
+    ),
+  );
+  expect(structured.check).toEqual({ command: check.command, code: check.code, tail: [] });
+  expect(structured.diff).toBe("");
+  expect(structured.diffNote).toBe(
+    "[diff truncated: 0 of 2 lines; full diff: git diff dev..sideteam/abc123]",
+  );
+  expect(text).toContain(structured.diffNote);
+});
+
+test("keeps a short full diff when the truncation note cannot fit", () => {
+  const check = { command: "npm test", code: 0, tail: [] };
+  const input = { ...outcome, diff: "change", check };
+  const expected = renderSummary(input, limits);
+  const actual = renderSummary(
+    { ...input, check: { ...check, tail: ["x".repeat(100)] } },
+    { ...limits, maxSummaryChars: expected.text.length },
+  );
+  expect(actual).toEqual(expected);
 });

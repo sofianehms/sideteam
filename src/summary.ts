@@ -25,71 +25,106 @@ export interface DelegationOutcome {
 
 type SummaryLimits = Pick<Config["limits"], "diffLines" | "checkLines" | "maxSummaryChars">;
 
+interface RenderedSummary {
+  text: string;
+  structured: Pick<
+    DelegationOutcome,
+    "id" | "status" | "engine" | "model" | "durationMs" | "reason" | "files" | "logPath"
+  > & {
+    omittedFiles: number;
+    check?: NonNullable<DelegationOutcome["check"]>;
+    engineMessage: string;
+    diff: string;
+    diffNote?: string;
+    nextStep: string;
+  };
+}
+
 function truncate(text: string, limit: number): string {
   if (text.length <= limit) return text;
   if (limit <= 0) return "";
   return `${text.slice(0, limit - 1)}…`;
 }
 
-export function renderSummary(outcome: DelegationOutcome, limits: SummaryLimits) {
+/** Renders matching text and fields, or throws if the cap cannot fit the required fields. */
+export function renderSummary(outcome: DelegationOutcome, limits: SummaryLimits): RenderedSummary {
   const { id, status, engine, model, durationMs, reason, check, base, logPath } = outcome;
-  const files = outcome.files.slice(0, 50);
-  const omittedFiles = outcome.files.length - files.length;
-  const engineMessage = truncate(outcome.engineMessage ?? "", 1500);
   const nextStep = `${status === "success" ? "apply" : "discard"} ${id}`;
-  const header = `SideTeam ${id}: ${status.toUpperCase()}`;
-  const actions = `Next step: ${nextStep}\nRaw log: ${logPath}`;
-  const details = [
+  const required = [
+    `SideTeam ${id}: ${status.toUpperCase()}`,
+    `Next step: ${nextStep}`,
+    `Raw log: ${logPath}`,
     `Engine: ${engine}${model ? ` | Model: ${model}` : ""} | Duration: ${durationMs} ms`,
     ...(reason ? [`Reason: ${reason}`] : []),
     "Files:",
-    ...files.map(({ path, added, deleted }) => `${path} +${added} -${deleted}`),
-    ...(omittedFiles ? [`… and ${omittedFiles} more`] : []),
-    ...(check
-      ? [
-          `Check: ${typeof check.command === "string" ? check.command : JSON.stringify(check.command)} (code: ${check.code ?? "unavailable"})`,
-        ]
-      : []),
-    ...(engineMessage ? [`Engine message: ${engineMessage}`] : []),
-  ].join("\n");
-
+  ];
+  const checkLabel = check
+    ? `Check: ${typeof check.command === "string" ? check.command : JSON.stringify(check.command)} (code: ${check.code ?? "unavailable"})`
+    : undefined;
   const diff = outcome.diff ? outcome.diff.replace(/\r?\n$/, "").split(/\r?\n/) : [];
   const tail = check?.tail ?? [];
-  const cap = Math.max(0, Math.floor(limits.maxSummaryChars));
+  const cap = Math.floor(limits.maxSummaryChars);
+  let fileCount = Math.min(outcome.files.length, 50);
+  const fileLines = outcome.files
+    .slice(0, fileCount)
+    .map(({ path, added, deleted }) => `${path} +${added} -${deleted}`);
+  let engineMessage = truncate(outcome.engineMessage ?? "", 1500);
   let diffCount = Math.min(diff.length, Math.max(0, Math.floor(limits.diffLines)));
   let checkCount = Math.min(tail.length, Math.max(0, Math.floor(limits.checkLines)));
 
-  function diffNote() {
-    return diffCount < diff.length
-      ? `[diff truncated: ${diffCount} of ${diff.length} lines; full diff: git diff ${base}..sideteam/${id}]`
-      : undefined;
-  }
-
-  function output() {
-    return [
-      ...(checkCount ? ["Check output:", ...tail.slice(-checkCount)] : []),
-      ...(diffCount ? ["Diff:", ...diff.slice(0, diffCount)] : []),
-      ...(diffNote() ? [diffNote()] : []),
+  function render() {
+    const omittedFiles = outcome.files.length - fileCount;
+    const checkLines = checkCount ? tail.slice(-checkCount) : [];
+    const diffLines = diff.slice(0, diffCount);
+    const diffNote =
+      diffCount < diff.length
+        ? `[diff truncated: ${diffCount} of ${diff.length} lines; full diff: git diff ${base}..sideteam/${id}]`
+        : undefined;
+    const text = [
+      ...required,
+      ...fileLines.slice(0, fileCount),
+      ...(omittedFiles ? [`… and ${omittedFiles} more`] : []),
+      ...(checkLabel ? [checkLabel] : []),
+      ...(engineMessage ? [`Engine message: ${engineMessage}`] : []),
+      ...(checkCount ? ["Check output:", ...checkLines] : []),
+      ...(diffCount ? ["Diff:", ...diffLines] : []),
+      ...(diffNote ? [diffNote] : []),
     ].join("\n");
+    return { text, omittedFiles, checkLines, diffLines, diffNote };
   }
 
-  let excerpt = output();
-  while (excerpt && header.length + actions.length + details.length + excerpt.length + 3 > cap) {
-    if (diffCount > 0) diffCount--;
+  if (!Number.isFinite(cap) || cap <= 0) {
+    throw new RangeError("maxSummaryChars must be a finite positive character budget");
+  }
+
+  let rendered = render();
+  let minDiffCount = 0;
+  if (rendered.text.length > cap && diffCount === diff.length && diffCount > 0) {
+    // Keep a short full diff when its truncation note would take at least as much space.
+    diffCount = 0;
+    if (render().text.length >= rendered.text.length) minDiffCount = diff.length;
+    diffCount = diff.length;
+  }
+  while (
+    rendered.text.length > cap &&
+    (diffCount > minDiffCount || checkCount || fileCount || engineMessage)
+  ) {
+    if (diffCount > minDiffCount) diffCount--;
     else if (checkCount > 0) checkCount--;
-    else break;
-    excerpt = output();
+    else if (fileCount > 0) fileCount--;
+    else {
+      const remaining = engineMessage.length - (rendered.text.length - cap);
+      engineMessage = truncate(engineMessage, remaining);
+    }
+    rendered = render();
   }
 
-  const required = `${header}\n${actions}`;
-  const body = excerpt ? `${details}\n${excerpt}` : details;
-  const text =
-    required.length >= cap
-      ? truncate(required, cap)
-      : [required, truncate(body, cap - required.length - 1)].filter(Boolean).join("\n");
+  if (rendered.text.length > cap) {
+    throw new RangeError(`maxSummaryChars (${cap}) is too small for the required summary fields`);
+  }
 
   return {
-    text,
+    text: rendered.text,
     structured: {
       id,
       status,
@@ -97,12 +132,12 @@ export function renderSummary(outcome: DelegationOutcome, limits: SummaryLimits)
       model,
       durationMs,
       reason,
-      files,
-      omittedFiles,
-      check: check && { ...check, tail: checkCount ? tail.slice(-checkCount) : [] },
+      files: outcome.files.slice(0, fileCount),
+      omittedFiles: rendered.omittedFiles,
+      check: check && { command: check.command, code: check.code, tail: rendered.checkLines },
       engineMessage,
-      diff: diff.slice(0, diffCount).join("\n"),
-      diffNote: diffNote(),
+      diff: rendered.diffLines.join("\n"),
+      diffNote: rendered.diffNote,
       nextStep,
       logPath,
     },
