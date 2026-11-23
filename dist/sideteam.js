@@ -29617,7 +29617,7 @@ function versionFrom3(stdout) {
   return stdout.match(/\b\d+\.\d+\.\d+(?:[-+][\w.+-]+)?\b/)?.[0];
 }
 function preferredModel(stdout) {
-  const models = stdout.trim().split(/\r?\n/).slice(1).map((line) => line.trim().split(/\s+/)[0]).filter(Boolean);
+  const models = stdout.split(/\r?\n/).slice(1).map((line) => line.trim().split(/\s+/)[0]).filter(Boolean);
   return models.find((model) => /(?:^|\/)qwen3-coder(?:[:.-]|$)/i.test(model)) ?? models.find((model) => /(?:^|\/)devstral(?:[:.-]|$)/i.test(model)) ?? models[0];
 }
 var opencodeAdapter = {
