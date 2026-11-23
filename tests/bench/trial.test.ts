@@ -79,7 +79,10 @@ function benchmarkRoot() {
   writeFileSync(
     join(root, "package.json"),
     JSON.stringify({
-      scripts: { build: "node -e \"require('node:fs').mkdirSync('dist', { recursive: true })\"" },
+      scripts: {
+        build:
+          "node -e \"require('node:fs').mkdirSync(require('node:path').dirname(process.argv[1]), { recursive: true })\"",
+      },
     }),
   );
   return root;
@@ -183,10 +186,14 @@ test("the built plugin copy contains only the runtime allowlist", async () => {
     cpSync(resolve(path), join(root, path), { recursive: true });
   }
   for (const path of ["bench", "tests"]) mkdirSync(join(root, path));
+  mkdirSync(join(root, "dist"));
+  const originalBundle = join(root, "dist", "sideteam.js");
+  writeFileSync(originalBundle, "original bundle");
   symlinkSync(resolve("node_modules"), join(root, "node_modules"), "junction");
   const plugin = await copyPlugin(root, scratch);
   expect(readdirSync(plugin).sort()).toEqual(
     [".claude-plugin", ".mcp.json", "commands", "dist", "package.json", "skills"].sort(),
   );
-  expect(readdirSync(join(plugin, "dist"))).toContain("sideteam.js");
+  expect(readFileSync(join(plugin, "dist", "sideteam.js"), "utf8")).toContain("createRequire");
+  expect(readFileSync(originalBundle, "utf8")).toBe("original bundle");
 });

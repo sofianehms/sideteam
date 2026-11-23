@@ -29,5 +29,5 @@ export function buildOptions(outfile) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await build(buildOptions("dist/sideteam.js"));
+  await build(buildOptions(process.argv[2] ?? "dist/sideteam.js"));
 }
