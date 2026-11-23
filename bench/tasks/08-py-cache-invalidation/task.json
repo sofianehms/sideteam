@@ -1,0 +1,19 @@
+{
+  "id": "08-py-cache-invalidation",
+  "level": "medium",
+  "language": "py",
+  "light": false,
+  "prompt": "Fix Catalog and Totals so total(category) returns the current sum of integer amounts in that category, or zero if empty. put(key, category, amount) adds or replaces an entry and remove(key) ignores missing keys. Keep caching totals and invalidate only the affected categories, including the old category when an entry moves.",
+  "check": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_visible"
+  ],
+  "hidden": [
+    "python3",
+    "-m",
+    "unittest",
+    "hidden.test_hidden"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "03-py-roman-numerals",
+  "level": "easy",
+  "language": "py",
+  "light": true,
+  "prompt": "Fix to_roman(number) to return the canonical uppercase Roman numeral for integers from 1 through 3999, including subtractive forms. Raise ValueError for integers outside that range.",
+  "check": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_visible"
+  ],
+  "hidden": [
+    "python3",
+    "-m",
+    "unittest",
+    "hidden.test_hidden"
+  ]
+}

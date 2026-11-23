@@ -1,0 +1,19 @@
+{
+  "id": "07-py-csv-quoting",
+  "level": "medium",
+  "language": "py",
+  "light": true,
+  "prompt": "Fix read_rows(text) and its field parser to read comma-separated records from a string. Support LF and CRLF, quoted commas and line breaks, doubled quotes inside quoted fields, and empty fields. Preserve field whitespace, skip blank records, and return a list of rows. Inputs are well-formed CSV and line breaks inside quoted fields must be preserved verbatim. Fields must fit within Python's csv.field_size_limit(), which defaults to 131,072 characters.",
+  "check": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_visible"
+  ],
+  "hidden": [
+    "python3",
+    "-m",
+    "unittest",
+    "hidden.test_hidden"
+  ]
+}

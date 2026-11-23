@@ -1,0 +1,19 @@
+{
+  "id": "11-py-retry-backoff",
+  "level": "hard",
+  "language": "py",
+  "light": true,
+  "prompt": "Implement retry(*, attempts, delay, exceptions, wait=time.sleep) and add visible tests. attempts is a positive integer counting the initial call; delay is a finite nonnegative number of seconds; exceptions is a tuple of retryable exception classes. Raise ValueError for invalid attempts or delay. Forward arguments, return the first successful result, and preserve function metadata. After a retryable failure call wait with delay, then twice that delay, and so on for each subsequent retry. Reset the delay for every call. Reraise the final failure and propagate other exceptions immediately, without waiting.",
+  "check": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_visible"
+  ],
+  "hidden": [
+    "python3",
+    "-m",
+    "unittest",
+    "hidden.test_hidden"
+  ]
+}
