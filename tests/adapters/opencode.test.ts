@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -187,12 +187,17 @@ test("keeps detection usable when the Ollama probe fails", async () => {
   ).resolves.toEqual({ found: true, bin: openCode, version: "1.2.3" });
 });
 
-test("passes shell metacharacters intact through the runner", async () => {
+test("passes shell metacharacters intact through the runner in a symlinked worktree", async () => {
+  const directory = join(job.worktree, "checkout");
+  const worktree = join(job.worktree, "linked-checkout");
+  await mkdir(directory);
+  await symlink(directory, worktree, "junction");
+
   const prompt = "--literal; $(printf changed) | & > < `quote` $PATH\nSecond line.";
-  const command = adapter.buildCommand({ ...job, prompt }, { ...config, bin });
+  const command = adapter.buildCommand({ ...job, worktree, prompt }, { ...config, bin });
   const result = await run(command, { timeoutMs: 5_000, logFile: join(job.runDir, "run.log") });
-  expect(adapter.parseResult({ ...result, runDir: job.runDir }).ok).toBe(true);
-  expect(await readFile(join(job.worktree, "received-prompt.txt"), "utf8")).toBe(prompt);
+  expect(adapter.parseResult({ ...result, runDir: job.runDir }).ok, result.stderr).toBe(true);
+  expect(await readFile(join(directory, "received-prompt.txt"), "utf8")).toBe(prompt);
 });
 
 test("delegates successfully with the fake executable and verifies the worktree change", async () => {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
@@ -12,7 +12,7 @@ if (args.length === 1 && args[0] === "--version") {
     ["run", "-m", "--format", "json", "--dir", "--auto"],
   );
   assert.match(model, /^ollama\/.+/);
-  assert.equal(dir, process.cwd());
+  assert.equal(realpathSync(dir), realpathSync(process.cwd()));
   assert.ok(args.length > 8);
   assert.equal(readFileSync(0, "utf8"), "");
   assert.equal(
