@@ -1,10 +1,26 @@
 import { spawn } from "node:child_process";
-import { createWriteStream, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { pipeline } from "node:stream/promises";
 
-switch (process.env.FAKE_MODE) {
+const [
+  mode = process.env.FAKE_MODE,
+  file = process.env.FAKE_FILE,
+  content = process.env.FAKE_CONTENT,
+] = process.argv.slice(2);
+
+switch (mode) {
+  case "edit-on-2nd": {
+    const state = process.env.FAKE_STATE;
+    const count = (existsSync(state) ? Number(readFileSync(state, "utf8")) : 0) + 1;
+    writeFileSync(state, String(count));
+    if (count === 2 && readFileSync(file, "utf8") !== "wrong") {
+      throw new Error("The first attempt's edit did not survive");
+    }
+    writeFileSync(file, count === 2 ? content : "wrong");
+    break;
+  }
   case "edit":
-    writeFileSync(process.env.FAKE_FILE, process.env.FAKE_CONTENT);
+    writeFileSync(file, content);
     break;
   case "fail":
     console.error("Fixture failed");
