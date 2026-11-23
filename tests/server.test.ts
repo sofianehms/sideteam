@@ -17,6 +17,7 @@ test("initializes over stdio from outside the project and lists the delegation t
         "apply",
         "discard",
         "engines",
+        "stats",
       ]);
     } finally {
       await client.close();

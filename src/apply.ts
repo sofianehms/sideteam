@@ -2,6 +2,7 @@ import { readFile, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { git } from "./git.js";
+import { appendEvent } from "./journal.js";
 import { dataDir } from "./paths.js";
 import { promptInstruction } from "./prompt.js";
 import { type RunMeta, readMeta, writeMeta } from "./runs.js";
@@ -54,6 +55,7 @@ export function applyDelegation(id: string, env = process.env) {
 
     await removeWorktree(meta.repo, { path: meta.worktree, branch: meta.branch }, "merged");
     await writeMeta(directory, { ...meta, status: "applied" });
+    await appendEvent(directory, { type: "apply", ts: new Date().toISOString(), id });
     return `Applied ${id}: merge commit ${result.commit}, ${meta.files.length} files`;
   });
 }
@@ -64,6 +66,7 @@ export function discardDelegation(id: string, env = process.env) {
     if (meta.status !== "discarded") {
       await removeWorktree(meta.repo, { path: meta.worktree, branch: meta.branch }, "force");
       await writeMeta(directory, { ...meta, status: "discarded" });
+      await appendEvent(directory, { type: "discard", ts: new Date().toISOString(), id });
     }
     return `Discarded ${id}`;
   });
