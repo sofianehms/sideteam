@@ -124,6 +124,30 @@ test("omits a detection proposal derived from an inherited variable value", asyn
 });
 
 test.each([
+  { user: "dev", model: "ollama/qwen3-coder:latest" },
+  { user: "devstral:latest", model: "ollama/qwen3-coder:latest" },
+  { user: "qwen3-coder:latest", model: "ollama/devstral:latest" },
+])("keeps unaffected detection entries when USER=$user", async ({ user, model }) => {
+  const { path, cleanup } = createTmpRepo();
+  vi.stubEnv("PATH", path);
+  vi.stubEnv("USER", user);
+  try {
+    await writeFile(join(path, "opencode"), '#!/bin/sh\nprintf "1.2.3\\n"\n', { mode: 0o755 });
+    await writeFile(
+      join(path, "ollama"),
+      '#!/bin/sh\nprintf "NAME\\ndevstral:latest\\nqwen3-coder:latest\\n"\n',
+      { mode: 0o755 },
+    );
+    const output = await inspectEngines({ detect: true }, path);
+    expect(JSON.parse(output)).toMatchObject({ engines: { local: { model } } });
+    if (user.includes(":")) expect(output).not.toContain(user);
+  } finally {
+    vi.unstubAllEnvs();
+    cleanup();
+  }
+});
+
+test.each([
   { variable: "TEST_SETTING", env: ["TEST_SETTING"], output: "stderr" },
   { variable: "USER", env: undefined, output: "stderr" },
   { variable: "USER", env: undefined, output: "version" },

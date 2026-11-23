@@ -27,16 +27,35 @@ async function checkEngine(check: () => Promise<CheckResult>): Promise<CheckResu
   }
 }
 
-function environmentRedactor(env: Record<string, string>) {
+function inheritedValues(env: Record<string, string>): string[] {
   // NO_COLOR is set to a fixed value by buildEngineEnv.
   const { NO_COLOR: _noColor, ...inherited } = env;
-  const values = Object.values(inherited)
+  return Object.values(inherited)
     .filter(Boolean)
-    .sort((a, b) => b.length - a.length);
-  const pattern = values.length
-    ? new RegExp(values.map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g")
-    : undefined;
+    .sort((a, b) => b.length - a.length)
+    .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+}
+
+function environmentRedactor(env: Record<string, string>) {
+  const values = inheritedValues(env);
+  const pattern = values.length ? new RegExp(values.join("|"), "g") : undefined;
   return (text: string | undefined) => (pattern ? text?.replace(pattern, "[redacted]") : text);
+}
+
+// Blanks only the discovery output lines that carry an inherited value as a whole token,
+// so one matching entry does not hide the unaffected entries listed next to it.
+function discoveryFilter(env: Record<string, string>) {
+  const values = inheritedValues(env);
+  const pattern = values.length
+    ? new RegExp(`(?<![A-Za-z0-9])(?:${values.join("|")})(?![A-Za-z0-9])`)
+    : undefined;
+  return (text: string) =>
+    pattern
+      ? text
+          .split(/(\r?\n)/)
+          .map((part) => (pattern.test(part) ? "" : part))
+          .join("")
+      : text;
 }
 
 function cell(value: string | undefined, limit = 64): string {
@@ -53,13 +72,13 @@ export async function inspectEngines(
   const repoRoot = root.code === 0 ? root.stdout.replace(/\r?\n$/, "") : cwd;
   if (detect) {
     const env = buildEngineEnv([]);
-    const redact = environmentRedactor(env);
+    const filter = discoveryFilter(env);
     const run: DetectContext["run"] = (bin, args, timeout) =>
       new Promise((resolve) => {
         execFile(bin, args, { cwd: repoRoot, env, timeout, windowsHide: true }, (error, stdout) => {
           resolve({
             code: error ? (typeof error.code === "number" ? error.code : null) : 0,
-            stdout: redact(stdout) === stdout ? stdout : "",
+            stdout: filter(stdout),
           });
         });
       });
