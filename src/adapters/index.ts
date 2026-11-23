@@ -1,9 +1,13 @@
 import { codexAdapter } from "./codex.js";
+import { geminiAdapter } from "./gemini.js";
 import { genericAdapter } from "./generic.js";
 import { opencodeAdapter } from "./opencode.js";
 
 const adapters = new Map(
-  [codexAdapter, genericAdapter, opencodeAdapter].map((adapter) => [adapter.name, adapter]),
+  [codexAdapter, geminiAdapter, genericAdapter, opencodeAdapter].map((adapter) => [
+    adapter.name,
+    adapter,
+  ]),
 );
 
 export function getAdapter(name: string) {
