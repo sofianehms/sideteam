@@ -23,6 +23,7 @@ SideTeam is a Claude Code plugin for delegating small coding tasks to a configur
 * **[🚀 Run](#-run)**
 * **[⚙️ Configuration](#️-configuration)**
 * **[🔌 Engines](#-engines)**
+* **[📊 Benchmark](#-benchmark)**
 * **[🔒 Security](#-security)**
 * **[🧪 Develop](#-develop)**
 * **[🤝 Contribute](#-contribute)**
@@ -130,6 +131,39 @@ Commands in `check` and `worktree.setup` run as a single executable without a sh
 | Custom executable | `generic` | Set `command` to an executable and its arguments. Generic engines are configured manually. |
 
 For local Ollama use, see the [Ollama presets and setup notes](examples/README.md).
+
+<br/>
+
+## 📊 Benchmark
+
+The light series ran on 2026-11-23 with the [benchmark runner](bench/README.md). Arm A is Claude Code alone. Arm B is Claude Code with SideTeam loaded and permission to delegate to Codex. Raw trials and the generated summary are in [`bench/results/light/`](bench/results/light/results.md).
+
+* 📅 Date: 2026-11-23T08:49:33.547Z (report generation).
+* 🧩 Coverage: 12/18 trials (partial). The `local` engine (OpenCode with Ollama) was not installed on the benchmark machine, so its 6 trials were skipped. Gemini is not part of the light series.
+* 🏷️ Versions: Claude Code 2.1.330 with `claude-sonnet-5-5`, Codex CLI 0.169.0. No Codex model was recorded because no trial delegated.
+* 🔁 Trials: six light tasks (three TypeScript, three Python; two per difficulty), one repetition per arm, 20-minute limit, Node.js 22.23.5 and Python 3.
+
+| Level | Arm | Engine | Success rate | Median Claude tokens | Median cache read | Savings (1 − B/A) | Median engine tokens | Median duration (s) | Cost per successful task (USD) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| easy | A | — | 50.0% | 14289 | 65914.5 | n/a | n/a | 6.644 | $0.134427 |
+| easy | B | codex | 50.0% | 14320 | 54962.5 | -0.2% | 0 | 7.080 | engine cost n/a |
+| medium | A | — | 100.0% | 15083.5 | 66153.5 | n/a | n/a | 10.252 | $0.073166 |
+| medium | B | codex | 100.0% | 15416 | 66677.5 | -2.2% | 0 | 10.791 | engine cost n/a |
+| hard | A | — | 100.0% | 17140 | 66196.5 | n/a | n/a | 13.873 | $0.086059 |
+| hard | B | codex | 100.0% | 18307.5 | 90590.5 | -6.8% | 0 | 17.021 | engine cost n/a |
+
+What these figures show:
+
+* ⚠️ SideTeam saved nothing in this series. Savings are negative at every level (-0.2%, -2.2%, -6.8%), and arm B was slower at every level. Claude never called the `delegate` tool in any arm B trial, although the plugin and its tools were loaded. The extra cost is the plugin's tool definitions and instructions, with no delegated work to offset it.
+* ❌ Success rates are equal in both arms. The single failure per arm is `01-ts-slugify`: both arms lowercased before removing non-ASCII characters, so the hidden check on the Kelvin sign (U+212A) failed. No trial timed out, and no failure came from an engine.
+
+Limits:
+
+* 📏 The sample is small: two trials per row and one repetition. These figures do not support a general conclusion.
+* 💵 Claude costs are API-equivalent estimates from Claude Code. The runs used a flat-rate Claude subscription, so no per-trial amount was billed.
+* ❔ Engine cost is unknown for subscriptions and local models. Codex ran on a ChatGPT subscription without a configured price, hence `engine cost n/a`.
+* 🖥️ No local model was measured, so no Ollama hardware applies to these results.
+* ⏳ The full series (144 planned trials) has started and resumes across sessions. Its partial state is in `bench/results/full/` and is not summarized here.
 
 <br/>
 
