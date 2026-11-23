@@ -115,6 +115,16 @@ describe("Codex adapter", () => {
     });
   });
 
+  it("reports a failed turn even when the process exits successfully", () => {
+    const stdout = '{"type":"turn.failed","error":{"message":"Turn failed."}}';
+    expect(adapter.parseResult(raw(stdout))).toEqual({
+      ok: false,
+      message: "",
+      tokens: null,
+      error: "Turn failed.",
+    });
+  });
+
   it("checks the configured binary with its prefix", async () => {
     await expect(adapter.check({ ...config, bin: [process.execPath, fake] })).resolves.toEqual({
       ok: true,

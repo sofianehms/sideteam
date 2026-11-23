@@ -1,8 +1,26 @@
+import type { EngineConfig } from "../config.js";
 import { buildEngineEnv } from "../env.js";
 import { findOnPath } from "./bin.js";
-import type { EngineAdapter } from "./types.js";
+import type { EngineAdapter, Job } from "./types.js";
 
 const name = "generic";
+
+function commandVariablePattern() {
+  return /\{(prompt_file|cwd|model)\}/g;
+}
+
+function expand(element: string, job: Job, cfg: EngineConfig): string {
+  const variables = {
+    prompt_file: job.promptFile,
+    cwd: job.worktree,
+    model: job.model ?? cfg.model,
+  };
+  return element.replace(commandVariablePattern(), (_, name: keyof typeof variables) => {
+    const value = variables[name];
+    if (value === undefined) throw new Error("{model} requires a configured model");
+    return value;
+  });
+}
 
 export function hasRequiredCommand(cfg: { adapter: string; command?: string[] }): boolean {
   return cfg.adapter !== name || cfg.command !== undefined;
@@ -11,12 +29,21 @@ export function hasRequiredCommand(cfg: { adapter: string; command?: string[] })
 export const genericAdapter: EngineAdapter = {
   name,
 
-  async check(cfg) {
-    const bin = cfg.command?.[0];
-    if (!bin) return { ok: false, message: "command must specify a program" };
-    return findOnPath(bin, process.env, process.platform)
-      ? { ok: true }
-      : { ok: false, message: `Program not found: ${bin}` };
+  async check(cfg, job) {
+    const executable = cfg.command?.[0];
+    if (!executable) return { ok: false, message: "command must specify a program" };
+    if (!job && commandVariablePattern().test(executable)) {
+      return { ok: false, deferred: true, message: "Executable expansion requires a job" };
+    }
+    try {
+      const bin = job ? expand(executable, job, cfg) : executable;
+      if (!bin) return { ok: false, message: "command must specify a program" };
+      return findOnPath(bin, buildEngineEnv(cfg.env ?? []), process.platform)
+        ? { ok: true }
+        : { ok: false, message: `Program not found: ${bin}` };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : String(error) };
+    }
   },
 
   async detect() {
@@ -24,18 +51,7 @@ export const genericAdapter: EngineAdapter = {
   },
 
   buildCommand(job, cfg) {
-    const variables = {
-      prompt_file: job.promptFile,
-      cwd: job.worktree,
-      model: job.model ?? cfg.model,
-    };
-    const [bin, ...args] = (cfg.command ?? []).map((element) =>
-      element.replace(/\{(prompt_file|cwd|model)\}/g, (_, name: keyof typeof variables) => {
-        const value = variables[name];
-        if (value === undefined) throw new Error("{model} requires a configured model");
-        return value;
-      }),
-    );
+    const [bin, ...args] = (cfg.command ?? []).map((element) => expand(element, job, cfg));
     if (!bin) throw new Error("command must specify a program");
     return { bin, args, cwd: job.worktree, env: buildEngineEnv(cfg.env ?? []) };
   },

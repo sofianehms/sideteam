@@ -20,17 +20,20 @@ export function findOnPath(
   const windows = platform === "win32";
   const variable = (key: string) =>
     windows ? env[Object.keys(env).find((name) => name.toUpperCase() === key) ?? key] : env[key];
+  const absolute = isAbsolute(name) || (windows && win32.isAbsolute(name));
   const extensions =
     windows && !extname(name)
-      ? (variable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)
+      ? [
+          ...(absolute ? [""] : []),
+          ...(variable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean),
+        ]
       : [""];
   const path = variable("PATH");
-  const candidates =
-    isAbsolute(name) || (windows && win32.isAbsolute(name))
-      ? [name]
-      : name.includes("/") || (windows && name.includes("\\"))
-        ? []
-        : (path?.split(windows ? ";" : ":") ?? []).map((dir) => resolve(dir, name));
+  const candidates = absolute
+    ? [name]
+    : name.includes("/") || (windows && name.includes("\\"))
+      ? []
+      : (path?.split(windows ? ";" : ":") ?? []).map((dir) => resolve(dir, name));
 
   for (const candidate of candidates) {
     for (const extension of extensions) {

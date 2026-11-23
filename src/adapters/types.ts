@@ -29,6 +29,7 @@ export interface EngineResult {
 
 export interface CheckResult {
   ok: boolean;
+  deferred?: boolean;
   version?: string;
   message?: string;
 }
@@ -53,7 +54,8 @@ export interface DetectResult {
 
 export interface EngineAdapter {
   name: string;
-  check(cfg: EngineConfig): Promise<CheckResult>;
+  /** Check the executable. A check that needs a job returns ok: false and deferred: true. */
+  check(cfg: EngineConfig, job?: Job): Promise<CheckResult>;
   detect(ctx: DetectContext): Promise<DetectResult>;
   buildCommand(job: Job, cfg: EngineConfig): Command;
   parseResult(raw: RawOutput): EngineResult;
