@@ -15,11 +15,11 @@ Handle design and architecture, ambiguous requirements, security-sensitive code,
 
 ## Choose an engine
 
-Call `engines` on first use to see which engines are configured and available. Prefer an engine with `privacy: "local"` for confidential code. If the available engines cannot meet the project's privacy requirements, handle the task directly.
+Call `engines` on first use to see which engines are configured and available. Choose an engine with `privacy: "local"` for confidential code. If the available engines cannot meet the project's privacy requirements, handle the task directly.
 
 ## Write the prompt
 
-Fill in [prompt-template.md](prompt-template.md) for a single task. State the objective in one sentence. Give the exact paths to modify, signatures, constraints, check command, and prohibitions. Pass the completed template as the `prompt`, the context paths as `files`, and the same command as `check` when calling `delegate`.
+Fill in [prompt-template.md](prompt-template.md) for a single task. State the objective in one sentence. Give the exact paths to modify, signatures, constraints, check command, and prohibitions. Pass the completed template as the `prompt`, the context paths as `files`, and the same command as `check` when calling `delegate`. Pass the selected engine name as `engine` on every `delegate` call, including retries. Omitting `engine` uses the configured default, which may be a cloud engine.
 
 ## Review the summary
 

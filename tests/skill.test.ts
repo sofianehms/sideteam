@@ -22,17 +22,26 @@ test("documents all delegation statuses and requires diff review before applying
   for (const status of ["success", "check_failed", "engine_failed", "timeout"]) {
     expect(skill).toContain(`\`${status}\``);
   }
-  expect(skill).toContain("Read the diff before calling apply");
+  expect(skill).toMatch(/^Read the diff before calling apply\.(?: |\r?$)/m);
 });
 
-test("includes the required headings in each prompt example", () => {
+test("requires passing the selected engine on every delegation", () => {
+  expect(skill).toContain('Choose an engine with `privacy: "local"` for confidential code.');
+  expect(skill).toContain(
+    "Pass the selected engine name as `engine` on every `delegate` call, including retries.",
+  );
+});
+
+test("includes content under each required heading in both prompt examples", () => {
   const examples = template.split(/^## Example \d+[^\r\n]*\r?\n/m).slice(1);
   expect(examples).toHaveLength(2);
   for (const example of examples) {
-    const headings = [...example.matchAll(/^### (.+)\r?$/gm)].map(([, heading]) => heading.trim());
-    expect(headings).toEqual(
-      expect.arrayContaining(["Objective", "Files", "Signatures", "Check", "Prohibitions"]),
-    );
+    const sections = example.split(/^### (.+)\r?\n/m);
+    for (const heading of ["Objective", "Files", "Signatures", "Check", "Prohibitions"]) {
+      const index = sections.findIndex((section, index) => index % 2 === 1 && section === heading);
+      expect(index, heading).toBeGreaterThan(0);
+      expect(sections[index + 1]?.trim(), heading).toBeTruthy();
+    }
   }
 });
 
