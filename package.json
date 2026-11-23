@@ -1,0 +1,30 @@
+{
+  "name": "sideteam",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check:dist": "node scripts/check-dist.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci .",
+    "format": "biome format --write .",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.26.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.14",
+    "@types/node": "20.19.40",
+    "@vitest/coverage-v8": "4.1.9",
+    "esbuild": "0.25.12",
+    "typescript": "5.9.3",
+    "vitest": "4.1.9"
+  }
+}
