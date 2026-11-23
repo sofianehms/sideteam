@@ -1,39 +1,165 @@
 # 🤝 SideTeam
 
-![Status](https://img.shields.io/badge/Status-Early%20development-orange)
+![Release](https://img.shields.io/badge/Release-v0.1.0-blueviolet)
 ![Language](https://img.shields.io/badge/Language-TypeScript-1d50de)
-![License](https://img.shields.io/badge/License-MIT-2ea44f)
+![Dependencies](https://img.shields.io/badge/Dependencies-none-2ea44f)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-fa8925)
 
 <br/>
 
 **Delegate the work. Save tokens.**
 
-SideTeam is a Claude Code plugin that gives Claude a team of execution engines of your choice: Codex CLI, OpenCode, Gemini CLI, or local models through Ollama. Claude keeps the planning and the judgment; the engine does the hands-on work in an isolated worktree, the project's own tests check the result, and Claude only reads a compact summary.
+SideTeam is a Claude Code plugin for delegating small coding tasks to a configured engine. It runs the task in a separate Git worktree, checks the result with your project’s own command, and returns a compact summary for review. The dependency badge refers to npm packages needed after installing the bundled plugin.
+
+> Delegate adding a missing-input test to the validation suite. Use the project’s configured check and show me the diff before applying it.
 
 <br/>
 
 ## 📋 Summary
 
 * **[📋 Summary](#-summary)**
-* **[✨ Planned features](#-planned-features)**
-* **[🚧 Status](#-status)**
+* **[✨ Features](#-features)**
+* **[🛠️ Install](#️-install)**
+* **[🚀 Run](#-run)**
+* **[⚙️ Configuration](#️-configuration)**
+* **[🔌 Engines](#-engines)**
+* **[🔒 Security](#-security)**
+* **[🧪 Develop](#-develop)**
+* **[🤝 Contribute](#-contribute)**
 * **[📄 License](#-license)**
 
 <br/>
 
-## ✨ Planned features
+## ✨ Features
 
-* 🔌 Pluggable engines: Codex CLI, OpenCode, Gemini CLI, Ollama, and any OpenAI-compatible endpoint
-* 🧪 Machine-checked results: the project's tests run after every delegated task
-* 🪜 Escalation: a task that fails moves up to a stronger engine, then back to Claude
-* 🌳 Isolation: each task runs in its own git worktree
-* 📊 Savings report: success rate per engine and tokens kept off Claude
+* 🌳 Run each task on its own branch and worktree, starting from the current commit.
+* 🧪 Run the project’s verification command and report its outcome with the diff.
+* 🔍 Review the full change before choosing whether to merge or discard it.
+* 🔌 Choose a cloud engine or configure a local Ollama backend.
+* 📦 Run the bundled server with Node.js without installing npm dependencies in the plugin directory.
 
 <br/>
 
-## 🚧 Status
+## 🛠️ Install
 
-SideTeam is in early development. Nothing is released yet; installation instructions will come with the first version.
+Install Claude Code, Git, and Node.js 20 or later. Install the engines you want to use and complete their authentication or local provider setup yourself. The marketplace install needs access to the GitHub repository.
+
+Run these commands in Claude Code.
+
+```text
+/plugin marketplace add sofianehms/sideteam
+/plugin install sideteam@sideteam
+/sideteam:setup
+```
+
+Setup detects available engines and proposes a configuration. Choose global or project scope, review the proposal, and confirm any overwrite. As an installation check, verify that the final engine table lists the expected engine as installed and shows the configuration file you chose. An installed executable can still require authentication.
+
+<br/>
+
+## 🚀 Run
+
+Open Claude Code in a Git repository with at least one commit. Ask it to delegate one well-scoped change and specify the files and verification command. Commit any in-progress changes that the engine needs to see. If the summary truncates the diff, use the full-diff command it provides. Review the full diff and check result before asking Claude Code to apply a successful run or discard it. Start from a clean working tree when applying a run.
+
+| Tool | Parameters and result |
+| --- | --- |
+| `engines` | Optional boolean `detect` defaults to false. Lists configured engines, executable status, and configuration sources. A generic engine may show `unknown` until it is run. With `detect: true`, returns a JSON proposal and a suggested check when available. |
+| `delegate` | Required nonempty `prompt`. Optional `engine` names a configured entry. Optional `files` is a list of repository-relative paths to include as context. Optional string `check` overrides the project verification command for this run. Optional `timeoutMinutes` is greater than zero and at most 240. Returns a run ID, status, and compact summary with changed files, check output, and diff when available. |
+| `apply` | Required nonempty run `id`. Merges the delegation branch into the current branch and removes its worktree on success. A merge refusal leaves the run available for inspection. The tool treats approval as the caller’s responsibility, so only apply after review and a passing check. |
+| `discard` | Required nonempty run `id`. Removes the delegation worktree and branch without merging. |
+
+| Status | Meaning |
+| --- | --- |
+| `success` | The engine produced changes and the project check passed. Review before applying. |
+| `check_failed` | The check failed or timed out. Inspect its output and discard the run before retrying. |
+| `engine_failed` | The engine or setup failed, or the run produced no changes to check. Inspect the reason before discarding. |
+| `timeout` | The engine exceeded its time limit. Discard the run before retrying. |
+
+<br/>
+
+## ⚙️ Configuration
+
+Set project options in `.sideteam.json` at the repository root. Global configuration lives at `$XDG_CONFIG_HOME/sideteam/config.json`, with a default of `~/.config/sideteam/config.json`. On Windows, use `%APPDATA%/sideteam/config.json`, with a default of `~/AppData/Roaming/sideteam/config.json`.
+
+SideTeam reads global settings first. Project values override global values. The `engines`, `worktree`, and `limits` objects merge one level deep. A project engine of the same name replaces the entire global entry. Arrays are replaced, including link lists. Unknown fields in the merged configuration are rejected.
+
+| Field | Meaning |
+| --- | --- |
+| `default` | Name of the engine to use when a call omits `engine`. A sole configured engine is selected automatically. With several engines and no default, choose one explicitly. |
+| `check` | Verification command, as a string or argument array. A call-level `check` takes precedence. A check is required for delegation. |
+| `engines` | Map of user-defined engine names to the settings below. |
+| `fallback` | Optional list of configured engine names. In this release, SideTeam validates the names and runs only the selected engine. |
+| `dataDir` | Storage for run metadata, prompts, and logs. Relative paths resolve against the configuration file that supplied the value. Defaults to `CLAUDE_PLUGIN_DATA` when set, then `$XDG_DATA_HOME/sideteam` (normally `~/.local/share/sideteam`) or `%LOCALAPPDATA%/sideteam` on Windows (normally `~/AppData/Local/sideteam`). Applying or discarding a run leaves these records in place. |
+| `worktree` | Worktree preparation settings. |
+| `worktree.link` | Existing repository-relative paths to link into the worktree. Absolute paths and parent segments are rejected. Defaults to `node_modules` and `.venv` when setup is absent, and to an empty list when setup is configured. An explicit empty list disables linking. |
+| `worktree.setup` | Optional command string or argument array run in the new worktree before the engine. A failure stops delegation before the engine starts. |
+| `limits` | Default timeouts and summary limits. |
+| `limits.timeoutMinutes` | Engine timeout in minutes, default 20. Precedence is call `timeoutMinutes`, then engine `timeoutMinutes`, then this limit. |
+| `limits.checkTimeoutMinutes` | Time limit in minutes for each setup or verification command, default 10. |
+| `limits.diffLines` | Maximum diff lines in the summary, default 150. |
+| `limits.checkLines` | Number of output lines retained from the end of the check, default 40. |
+| `limits.maxSummaryChars` | Maximum summary length in characters, default 8,000. |
+
+Commands in `check` and `worktree.setup` run as a single executable without a shell. Put multi-step commands in a project script.
+
+| Field under `engines.<name>` | Meaning |
+| --- | --- |
+| `adapter` | Required adapter name from the table below. |
+| `model` | Optional engine selection. Required as `provider/model` for OpenCode and when a generic command uses `{model}`. |
+| `bin` | Override the built-in executable using a program string or an array starting with the program and its leading arguments. Use `command` for the generic adapter. |
+| `args` | Extra arguments for the built-in adapters. |
+| `command` | Argument array required for the generic adapter. Place the executable first. Supports `{prompt_file}`, `{cwd}`, and `{model}` substitutions. |
+| `options` | Adapter-specific string, number, or boolean values. Codex supports `oss: true` and `localProvider` in OSS mode. |
+| `env` | Additional inherited environment variable names. Values come from the process environment. |
+| `privacy` | `local` or `cloud` (default). Describes where processing happens. Set it to reflect the actual provider. |
+| `timeoutMinutes` | Positive per-engine timeout in minutes. A call override takes precedence. |
+
+<br/>
+
+## 🔌 Engines
+
+| Engine | Adapter | Configuration |
+| --- | --- | --- |
+| Codex CLI | `codex` | Uses the `codex` executable by default. Supports the workspace-write sandbox and optional OSS mode. |
+| OpenCode | `opencode` | Uses the `opencode` executable by default. Set `model` to a provider-qualified name. |
+| Gemini CLI | `gemini` | Uses the `gemini` executable by default. For API-key authentication, allow the relevant variable in `env`. Not yet verified in real conditions. |
+| Custom executable | `generic` | Set `command` to an executable and its arguments. Generic engines are configured manually. |
+
+For local Ollama use, see the [Ollama presets and setup notes](examples/README.md).
+
+<br/>
+
+## 🔒 Security
+
+* Each delegation runs in a separate worktree. Linked dependencies can still point into the original checkout. Codex runs with its workspace-write sandbox by default. Engines without a sandbox retain the process user’s filesystem permissions.
+* SideTeam passes engines a filtered environment with basic system variables and any names explicitly listed in `env`. Setup and verification commands inherit the server environment. Run trusted project scripts and pass only the variables an engine needs.
+* Cloud providers can receive source code and prompts. Check their data handling and retention terms, especially on free tiers. Use a verified local configuration for confidential work. The `privacy` setting describes the provider and does not enforce network isolation.
+* The OpenCode adapter sends the prompt on standard input. If you pass prompt text as an OpenCode argument yourself, it can be visible in the process list.
+* SideTeam sends no telemetry. Run prompts and logs are stored locally under `dataDir`. Review engine and provider telemetry settings separately.
+* On Windows, `.cmd` wrappers cannot be launched directly by the shell-free runner. Configure a native executable or use Node with the engine’s JavaScript entry point.
+
+<br/>
+
+## 🧪 Develop
+
+Run these commands from the repository root with Node.js 20 or later.
+
+```console
+$ npm ci
+$ npm test
+$ npm run lint
+$ npm run build
+$ npm run check:dist
+```
+
+Tests use fake engines and temporary repositories. The suite requires at least 80% line, statement, and function coverage for core code. GitHub Actions tests Node.js 20 and 22 on Linux and macOS.
+
+The marketplace runs the checked-in `dist/sideteam.js` directly. Rebuild it after changes that affect the bundle and force-add this file because `dist/` is ignored. The bundle check compares it byte-for-byte with a fresh build.
+
+<br/>
+
+## 🤝 Contribute
+
+Open pull requests against `dev` and use Conventional Commits.
 
 <br/>
 
