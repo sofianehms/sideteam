@@ -1,6 +1,6 @@
 # 🤝 SideTeam
 
-![Release](https://img.shields.io/badge/Release-v0.1.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v0.2.0-blueviolet)
 ![Language](https://img.shields.io/badge/Language-TypeScript-1d50de)
 ![Dependencies](https://img.shields.io/badge/Dependencies-none-2ea44f)
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-fa8925)
@@ -37,6 +37,7 @@ SideTeam is a Claude Code plugin for delegating small coding tasks to a configur
 * 🧪 Run the project’s verification command and report its outcome with the diff.
 * 🔍 Review the full change before choosing whether to merge or discard it.
 * 🔌 Choose a cloud engine or configure a local Ollama backend.
+* 📊 Track delegation outcomes, durations, and reported tokens by engine.
 * 📦 Run the bundled server with Node.js without installing npm dependencies in the plugin directory.
 
 <br/>
@@ -67,6 +68,7 @@ Open Claude Code in a Git repository with at least one commit. Ask it to delegat
 | `delegate` | Required nonempty `prompt`. Optional `engine` names a configured entry. Optional `files` is a list of repository-relative paths to include as context. Optional string `check` overrides the project verification command for this run. Optional `timeoutMinutes` is greater than zero and at most 240. Optional boolean `fallback` defaults to true. Returns a run ID, status, and compact summary with changed files, check output, and diff when available. |
 | `apply` | Required nonempty run `id`. Merges the delegation branch into the current branch and removes its worktree on success. A merge refusal leaves the run available for inspection. The tool treats approval as the caller’s responsibility, so only apply after review and a passing check. |
 | `discard` | Required nonempty run `id`. Removes the delegation worktree and branch without merging. |
+| `stats` | Optional positive `sinceDays` defaults to 30. Optional `repo` defaults to `"current"`. Use `"all"` for every repository in the active journal. Returns counts by outcome, success rate, median duration, reported input and output tokens and how many runs reported them, and applications. |
 
 | Status | Meaning |
 | --- | --- |
@@ -74,6 +76,8 @@ Open Claude Code in a Git repository with at least one commit. Ask it to delegat
 | `check_failed` | The last check failed. Inspect its output before discarding the run. |
 | `engine_failed` | The engine or setup failed, or the run produced no changes to check. Inspect the reason before discarding. |
 | `timeout` | The last engine or check exceeded its time limit. |
+
+Run `/sideteam:stats` in Claude Code to see the table. SideTeam stores events in `<dataDir>/journal.jsonl` and reports the number of malformed lines it skipped. Each completed delegation is counted once under its final engine. The duration includes retries and fallbacks, and tokens come from the final attempt. Applications count selected delegations applied within the same time window.
 
 <br/>
 
@@ -90,7 +94,7 @@ SideTeam reads global settings first. Project values override global values. The
 | `engines` | Map of user-defined engine names to the settings below. |
 | `fallback` | Optional list of configured engine names to try in order after the selected engine. Each name is tried once in the chain, with its own retry budget. |
 | `retries` | Number of extra attempts per engine after a failed check. Use an integer from 0 to 3. The default is 1. |
-| `dataDir` | Storage for run metadata, prompts, and logs. Relative paths resolve against the configuration file that supplied the value. Defaults to `CLAUDE_PLUGIN_DATA` when set, then `$XDG_DATA_HOME/sideteam` (normally `~/.local/share/sideteam`) or `%LOCALAPPDATA%/sideteam` on Windows (normally `~/AppData/Local/sideteam`). Applying or discarding a run leaves these records in place. |
+| `dataDir` | Storage for the journal, run metadata, prompts, and logs. Relative paths resolve against the configuration file that supplied the value. Defaults to `CLAUDE_PLUGIN_DATA` when set, then `$XDG_DATA_HOME/sideteam` (normally `~/.local/share/sideteam`) or `%LOCALAPPDATA%/sideteam` on Windows (normally `~/AppData/Local/sideteam`). Applying or discarding a run leaves these records in place. |
 | `worktree` | Worktree preparation settings. |
 | `worktree.link` | Existing repository-relative paths to link into the worktree. Absolute paths and parent segments are rejected. Defaults to `node_modules` and `.venv` when setup is absent, and to an empty list when setup is configured. An explicit empty list disables linking. |
 | `worktree.setup` | Optional command string or argument array run in the new worktree before the engine. A failure skips that engine. |
@@ -173,7 +177,7 @@ Limits:
 * SideTeam passes engines a filtered environment with basic system variables and any names explicitly listed in `env`. Setup and verification commands inherit the server environment. Run trusted project scripts and pass only the variables an engine needs.
 * Cloud providers can receive source code and prompts. Check their data handling and retention terms, especially on free tiers. Use a verified local configuration for confidential work. The `privacy` setting describes the provider and does not enforce network isolation.
 * The OpenCode adapter sends the prompt on standard input. If you pass prompt text as an OpenCode argument yourself, it can be visible in the process list.
-* SideTeam sends no telemetry. Run prompts and logs are stored locally under `dataDir`. Review engine and provider telemetry settings separately.
+* SideTeam sends no telemetry. Run prompts and logs are stored locally under `dataDir`. The journal records summary metadata and excludes prompts, logs, and environment variables. Review engine and provider telemetry settings separately.
 * On Windows, `.cmd` wrappers cannot be launched directly by the shell-free runner. Configure a native executable or use Node with the engine’s JavaScript entry point.
 
 <br/>

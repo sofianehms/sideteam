@@ -30,6 +30,7 @@ vi.mock("../src/worktree.js", () => ({
   commitAll: async () => true,
   changes: async () => ({ files: [], diff: "", commits: 1 }),
 }));
+vi.mock("../src/journal.js", () => ({ appendEvent: vi.fn() }));
 vi.mock("../src/runs.js", () => ({
   createRunDir: async () => "/runs",
   publishRunArtifacts: vi.fn(),

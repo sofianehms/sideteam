@@ -7,6 +7,7 @@ import { type Config, effectiveLinks, loadConfig, resolveTimeoutMinutes } from "
 import { buildEngineEnv } from "./env.js";
 import { buildChain, nextAction, retryPrompt } from "./fallback.js";
 import { git } from "./git.js";
+import { appendEvent } from "./journal.js";
 import { dataDir } from "./paths.js";
 import { framePrompt } from "./prompt.js";
 import { run } from "./runner.js";
@@ -253,6 +254,22 @@ export async function runDelegation(
         attempts,
         files: changed.files,
         check: check ? { command, code: check.code } : null,
+      });
+      await appendEvent(directory, {
+        type: "delegation",
+        ts: new Date().toISOString(),
+        id,
+        repo,
+        engine: selected,
+        adapter: cfg.adapter,
+        model: cfg.model ?? null,
+        status,
+        attempts: attempts.length,
+        durationMs,
+        files: changed.files.length,
+        added: changed.files.reduce((total, file) => total + file.added, 0),
+        deleted: changed.files.reduce((total, file) => total + file.deleted, 0),
+        tokens,
       });
       return renderSummary(
         {
