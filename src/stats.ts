@@ -14,15 +14,19 @@ interface EngineStats {
   applications: number;
 }
 
-export function computeStats(
-  events: readonly JournalEvent[],
-  { sinceDays, repo, now }: { sinceDays: number; repo: string | null; now: number },
-): EngineStats[] {
+export type StatsWindow = { sinceDays: number; repo: string | null; now: number };
+
+export function eventsInWindow(events: readonly JournalEvent[], { sinceDays, now }: StatsWindow) {
   const cutoff = now - sinceDays * 86_400_000;
-  const inWindow = events.filter(({ ts }) => {
+  return events.filter(({ ts }) => {
     const time = Date.parse(ts);
     return time >= cutoff && time <= now;
   });
+}
+
+export function computeStats(events: readonly JournalEvent[], window: StatsWindow): EngineStats[] {
+  const { repo } = window;
+  const inWindow = eventsInWindow(events, window);
   const applied = new Set(inWindow.filter(({ type }) => type === "apply").map(({ id }) => id));
   const engines = new Map<string, { row: EngineStats; durations: number[] }>();
 
@@ -79,12 +83,16 @@ export function computeStats(
     });
 }
 
+export function engineLabel(engine: string): string {
+  const name = engine.replace(/[|\\]/g, "/").replace(/\s+/g, " ").trim();
+  return name.length > 64 ? `${name.slice(0, 63)}…` : name;
+}
+
 export function renderStats(rows: readonly EngineStats[], malformed: number): string {
   const header =
     "| Engine | Delegations | Successes | Failed checks | Failed engines | Timeouts | Success rate | Median (ms) | Tokens | Token reports | Applied |";
   const table = rows.map((row) => {
-    const name = row.engine.replace(/[|\\]/g, "/").replace(/\s+/g, " ").trim();
-    const engine = name.length > 64 ? `${name.slice(0, 63)}…` : name;
+    const engine = engineLabel(row.engine);
     return `| ${engine} | ${row.delegations} | ${row.successes} | ${row.failedChecks} | ${row.failedEngines} | ${row.timeouts} | ${(row.successRate * 100).toFixed(1)}% | ${row.medianDurationMs} | ${row.tokens} | ${row.tokenReports} | ${row.applications} |`;
   });
   return [

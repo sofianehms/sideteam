@@ -1,0 +1,4 @@
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"parallel","content":[{"type":"tool_use","id":"tool-h","name":"mcp__plugin_sideteam_sideteam__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}},{"type":"tool_use","id":"tool-i","name":"mcp__plugin_sideteam_sideteam__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":5,"input_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-h","content":[{"type":"text","text":"SideTeam f-one: SUCCESS"}]}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-i","content":[{"type":"text","text":"SideTeam f-two: SUCCESS"}]}]}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"next","content":[{"type":"text","text":"PRIVATE_TRANSCRIPT_MARKER"}],"usage":{"output_tokens":4,"input_tokens":120,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}

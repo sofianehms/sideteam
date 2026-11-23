@@ -14,6 +14,7 @@ beforeEach(() => {
   directory = mkdtempSync(join(process.cwd(), ".sideteam-config-test-"));
   repoRoot = join(directory, "project");
   env = {
+    HOME: directory,
     XDG_CONFIG_HOME: join(directory, "config"),
     CLAUDE_PLUGIN_DATA: join(directory, "plugin"),
   };
@@ -48,8 +49,23 @@ test("uses the exact defaults when both files are missing", () => {
         checkLines: 40,
         maxSummaryChars: 8000,
       },
+      savings: { enabled: true, transcriptsDir: join(directory, ".claude", "projects") },
     },
     sources: [],
+  });
+});
+
+test("uses the transcript directory from Claude configuration and merges explicit fields", () => {
+  env.CLAUDE_CONFIG_DIR = join(directory, "claude");
+  expect(load().config.savings).toEqual({
+    enabled: true,
+    transcriptsDir: join(env.CLAUDE_CONFIG_DIR, "projects"),
+  });
+  writeConfig(globalFile, { savings: { enabled: false, transcriptsDir: "transcripts" } });
+  writeConfig(projectFile, { savings: { enabled: true } });
+  expect(load().config.savings).toEqual({
+    enabled: true,
+    transcriptsDir: join(env.XDG_CONFIG_HOME ?? "", "sideteam", "transcripts"),
   });
 });
 
@@ -122,6 +138,7 @@ test("validates engine references against the merged engines", () => {
 test.each([
   [{ unexpected: true }, "unexpected"],
   [{ limits: { unexpected: true } }, "limits.unexpected"],
+  [{ savings: { enabled: "false" } }, "savings.enabled"],
   [{ worktree: { unexpected: true } }, "worktree.unexpected"],
   [{ engines: { local: { adapter: "runner", unexpected: true } } }, "engines.local.unexpected"],
   [{ engines: { local: { adapter: 123 } } }, "engines.local.adapter"],

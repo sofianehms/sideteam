@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { posix, win32 } from "node:path";
 import { z } from "zod";
 import { hasRequiredCommand } from "./adapters/generic.js";
@@ -63,6 +64,10 @@ const configSchema = z.strictObject({
   dataDir: z.string().optional(),
   worktree: worktreeSchema,
   limits: limitsSchema,
+  savings: z.strictObject({
+    enabled: z.boolean(),
+    transcriptsDir: z.string().min(1),
+  }),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -178,6 +183,9 @@ export function loadConfig({
   const projectPath = projectConfigPath(repoRoot, { platform });
   const global = readConfig(globalPath);
   const project = readConfig(projectPath);
+  const path = platform === "win32" ? win32 : posix;
+  const environment = env ?? process.env;
+  const home = (platform === "win32" ? environment.USERPROFILE : environment.HOME) || homedir();
 
   const merged = {
     ...global,
@@ -185,13 +193,20 @@ export function loadConfig({
     engines: mergeSection(global?.engines, project?.engines),
     worktree: mergeSection(global?.worktree, project?.worktree),
     limits: mergeSection(global?.limits, project?.limits, defaultLimits),
+    savings: mergeSection(global?.savings, project?.savings, {
+      enabled: true,
+      transcriptsDir: path.resolve(
+        environment.CLAUDE_CONFIG_DIR || path.join(home, ".claude"),
+        "projects",
+      ),
+    }),
   };
 
   function sourceFor(key: PropertyKey[]): string {
     const [section, field] = key;
     const projectSection = project?.[String(section)];
     const fromProject =
-      field !== undefined && ["engines", "worktree", "limits"].includes(String(section))
+      field !== undefined && ["engines", "worktree", "limits", "savings"].includes(String(section))
         ? isObject(projectSection) && Object.hasOwn(projectSection, field)
         : project !== undefined && Object.hasOwn(project, section);
     return fromProject ? projectPath : globalPath;
@@ -208,10 +223,13 @@ export function loadConfig({
     invalid(key, issue.message);
   }
   const config = result.data;
-  const path = platform === "win32" ? win32 : posix;
   if (config.dataDir !== undefined && !path.isAbsolute(config.dataDir)) {
     const file = sourceFor(["dataDir"]);
     config.dataDir = path.resolve(path.dirname(file), config.dataDir);
+  }
+  if (!path.isAbsolute(config.savings.transcriptsDir)) {
+    const file = sourceFor(["savings", "transcriptsDir"]);
+    config.savings.transcriptsDir = path.resolve(path.dirname(file), config.savings.transcriptsDir);
   }
 
   if (config.default !== undefined && !Object.hasOwn(config.engines, config.default)) {

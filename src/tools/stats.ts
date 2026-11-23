@@ -5,13 +5,15 @@ import { loadConfig } from "../config.js";
 import { git } from "../git.js";
 import { readEvents } from "../journal.js";
 import { dataDir } from "../paths.js";
+import { renderSavings } from "../savings.js";
 import { computeStats, renderStats } from "../stats.js";
 
 export function registerStats(server: McpServer) {
   server.registerTool(
     "stats",
     {
-      description: "Show delegation statistics by engine for the last 30 days by default.",
+      description:
+        "Show delegation statistics and estimated token savings for the last 30 days by default.",
       inputSchema: z.object({
         sinceDays: z.number().positive().optional(),
         repo: z.enum(["current", "all"]).optional(),
@@ -25,12 +27,16 @@ export function registerStats(server: McpServer) {
         const repoRoot = root.code === 0 ? await realpath(root.stdout.replace(/\r?\n$/, "")) : cwd;
         const { config } = loadConfig({ repoRoot });
         const { events, malformed } = await readEvents(dataDir(config));
-        const rows = computeStats(events, {
+        const window = {
           sinceDays,
           repo: repo === "current" ? repoRoot : null,
           now: Date.now(),
-        });
-        return { content: [{ type: "text", text: renderStats(rows, malformed) }] };
+        };
+        const rows = computeStats(events, window);
+        const savings = await renderSavings(events, window, config.savings);
+        return {
+          content: [{ type: "text", text: `${renderStats(rows, malformed)}\n\n${savings}` }],
+        };
       } catch (error) {
         return {
           isError: true,
