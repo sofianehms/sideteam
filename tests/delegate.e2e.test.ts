@@ -203,7 +203,14 @@ test("checks a project using its linked ignored dependencies", async () => {
   await writeFile(join(dependency, "index.js"), 'module.exports = "ready";');
   await writeFile(
     join(repo.path, "check.mjs"),
-    'import dep from "dep"; if (dep !== "ready") process.exitCode = 1;',
+    `import assert from "node:assert/strict";
+import { lstatSync } from "node:fs";
+import dep from "dep";
+
+// A bare import can also resolve through the parent repository's node_modules.
+assert.ok(lstatSync(new URL("./node_modules", import.meta.url)).isSymbolicLink());
+assert.equal(dep, "ready");
+`,
   );
   const id = outcome(await delegate({ check: [process.execPath, "check.mjs"] }), "success");
   expect(git("diff", "--name-only", `HEAD..sideteam/${id}`).trim()).toBe("received-prompt.txt");
