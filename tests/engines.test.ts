@@ -103,6 +103,24 @@ test("returns a detection proposal that loads once saved", async () => {
   }
 });
 
+test("keeps the only model when the discovery header matches an inherited value", async () => {
+  const { path, cleanup } = createTmpRepo();
+  vi.stubEnv("PATH", path);
+  vi.stubEnv("USER", "NAME");
+  try {
+    await writeFile(join(path, "opencode"), '#!/bin/sh\nprintf "1.2.3\\n"\n', { mode: 0o755 });
+    await writeFile(join(path, "ollama"), '#!/bin/sh\nprintf "NAME\\nmodel-a\\n"\n', {
+      mode: 0o755,
+    });
+    expect(JSON.parse(await inspectEngines({ detect: true }, path))).toMatchObject({
+      engines: { local: { model: "ollama/model-a" } },
+    });
+  } finally {
+    vi.unstubAllEnvs();
+    cleanup();
+  }
+});
+
 test("omits a detection proposal derived from an inherited variable value", async () => {
   const { path, cleanup } = createTmpRepo();
   vi.stubEnv("PATH", path);
