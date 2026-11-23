@@ -95,7 +95,10 @@ async function compileCli(root: string) {
     target: "node20",
     format: "esm",
   });
-  return outfile;
+  // macOS temporary directory paths can also reach the bundled entry point through a symlink.
+  const alias = join(scratch, "project-link");
+  symlinkSync(root, alias, "junction");
+  return join(alias, "run.mjs");
 }
 
 test("quota at trial three exits 75 and resumption retries it without duplicates", async () => {
