@@ -1,0 +1,19 @@
+{
+  "id": "04-py-word-frequency",
+  "level": "easy",
+  "language": "py",
+  "light": false,
+  "prompt": "Fix word_frequency(text) to count maximal runs of ASCII letters, ignoring case. Treat whitespace, punctuation, digits and non-ASCII letters as separators. Return a dictionary of lowercase words to counts.",
+  "check": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_visible"
+  ],
+  "hidden": [
+    "python3",
+    "-m",
+    "unittest",
+    "hidden.test_hidden"
+  ]
+}

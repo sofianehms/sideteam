@@ -1,0 +1,19 @@
+{
+  "id": "12-py-json-inventory",
+  "level": "hard",
+  "language": "py",
+  "light": false,
+  "prompt": "Implement JSON persistence for Inventory(path) and add visible tests. Accept a string or pathlib.Path. Load the UTF-8 JSON object mapping nonempty string SKUs to positive integer quantities on construction. Start empty if the file is missing. Raise ValueError for malformed JSON or contents outside that schema. quantity(sku) returns zero for unknown items. set_quantity(sku, quantity) takes a nonempty string and a nonnegative integer, rejects invalid values with ValueError, and removes the item at zero. Persist changes only when save() writes the JSON object to path.",
+  "check": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_visible"
+  ],
+  "hidden": [
+    "python3",
+    "-m",
+    "unittest",
+    "hidden.test_hidden"
+  ]
+}
