@@ -1,0 +1,17 @@
+{
+  "id": "06-ts-date-overlap",
+  "level": "medium",
+  "language": "ts",
+  "light": false,
+  "prompt": "Fix date interval overlap across the interval and overlap helpers. Use half-open intervals [start, end). Touching or empty intervals never overlap. Compare the instants represented by Date objects, and throw RangeError for invalid dates or reversed endpoints, even if the other interval is empty.",
+  "check": [
+    "node",
+    "--test",
+    "visible.test.ts"
+  ],
+  "hidden": [
+    "node",
+    "--test",
+    "hidden/hidden.test.ts"
+  ]
+}

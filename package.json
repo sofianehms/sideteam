@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "bench:validate": "esbuild bench/validate-tasks.ts --bundle --packages=external --platform=node --format=esm --outfile=bench/.out/validate-tasks.js && node bench/.out/validate-tasks.js",
     "build": "node scripts/build.mjs",
     "check:dist": "node scripts/check-dist.mjs",
     "typecheck": "tsc --noEmit",

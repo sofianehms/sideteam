@@ -1,0 +1,17 @@
+{
+  "id": "09-ts-expiring-lru",
+  "level": "hard",
+  "language": "ts",
+  "light": true,
+  "prompt": "Implement LruCache<K, V> and add visible tests. The constructor takes a positive integer capacity, a positive finite default TTL in milliseconds, and an optional clock function (default Date.now). set inserts or replaces a value and refreshes its TTL. get returns undefined for missing or expired entries and promotes a live entry without extending its TTL. At capacity discard expired entries before evicting the least recently used live entry. An entry expires exactly at its deadline. Throw RangeError for invalid capacity or TTL.",
+  "check": [
+    "node",
+    "--test",
+    "visible.test.ts"
+  ],
+  "hidden": [
+    "node",
+    "--test",
+    "hidden/hidden.test.ts"
+  ]
+}
