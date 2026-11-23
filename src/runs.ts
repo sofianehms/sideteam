@@ -14,7 +14,7 @@ export interface RunMeta {
   engine: string;
   adapter: string;
   model: string | null;
-  status: DelegationStatus;
+  status: DelegationStatus | "applied" | "discarded";
   reason: string | null;
   startedAt: string;
   durationMs: number;

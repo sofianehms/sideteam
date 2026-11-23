@@ -6,13 +6,17 @@ import { expect, test } from "vitest";
 import { connectMcpClient } from "./helpers/mcp-client.js";
 import { createTmpRepo } from "./helpers/tmp-repo.js";
 
-test("initializes over stdio from outside the project and lists delegate", async () => {
+test("initializes over stdio from outside the project and lists the delegation tools", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "sideteam-client-"));
   try {
     const client = await connectMcpClient(cwd);
     try {
       expect(client.getServerVersion()?.name).toBe("sideteam");
-      expect((await client.listTools()).tools.map(({ name }) => name)).toEqual(["delegate"]);
+      expect((await client.listTools()).tools.map(({ name }) => name)).toEqual([
+        "delegate",
+        "apply",
+        "discard",
+      ]);
     } finally {
       await client.close();
     }
