@@ -21,15 +21,23 @@ export type Trial = {
   repetition: number;
 };
 
+export function requestedEngines(
+  series: Series,
+  engines: Record<string, BenchmarkEngine>,
+  names?: string[],
+): string[] {
+  return [...new Set(names ?? (series === "light" ? ["codex", "local"] : Object.keys(engines)))];
+}
+
 export async function selectEngines(
   series: Series,
   engines: Record<string, BenchmarkEngine>,
-  names = series === "light" ? ["codex", "local"] : Object.keys(engines),
+  names = requestedEngines(series, engines),
   announce = console.log,
   adapterFor: (name: string) => Pick<EngineAdapter, "check"> = getAdapter,
 ): Promise<AvailableEngine[]> {
   const available: AvailableEngine[] = [];
-  for (const name of new Set(names)) {
+  for (const name of requestedEngines(series, engines, names)) {
     if (!Object.hasOwn(engines, name)) {
       announce(`Skipping engine "${name}": no configuration`);
       continue;
@@ -72,4 +80,19 @@ export function planSeries(
     }
   }
   return trials;
+}
+
+export function skippedEngines(
+  requested: string[],
+  engines: Record<string, BenchmarkEngine>,
+  available: AvailableEngine[],
+): AvailableEngine[] {
+  return requested
+    .filter(
+      (name) => Object.hasOwn(engines, name) && !available.some((engine) => engine.name === name),
+    )
+    .map((name) => {
+      const { pricePerMTok, ...config } = engines[name];
+      return { name, config, pricePerMTok, version: null };
+    });
 }

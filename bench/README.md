@@ -56,7 +56,7 @@ Generate `results.md` and `results.json` for the default light directory.
 $ npm run bench -- report
 ```
 
-Pass `--out` to the report command for a full series or a different directory. Coverage uses the saved trial plan when available and marks an incomplete run as partial. Each table row covers one difficulty level and one arm or engine. The main Claude token median includes input, output, and cache creation. Cache reads have their own column. Savings are calculated as one minus the delegated median divided by the baseline median for that level. Token medians use trials with recorded usage.
+Pass `--out` to the report command for a full series or a different directory. Coverage uses the saved trial plan when available and marks an incomplete run as partial. Trials of a requested engine that was skipped as unavailable stay in the plan, so a run without it is reported as partial. Each table row covers one difficulty level and one arm or engine. The main Claude token median includes input, output, and cache creation. Cache reads have their own column. Savings are calculated as one minus the delegated median divided by the baseline median for that level. Token medians use trials with recorded usage.
 
 Costs are API-equivalent estimates. Cost per successful task divides the sum of measured Claude and engine costs across all trials in the row by the number of successes. Set an engine's optional `pricePerMTok` input and output rates in USD to estimate its cost. For unpriced engines, the report displays `engine cost n/a` and includes the measured engine tokens.
 
