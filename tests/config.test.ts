@@ -206,3 +206,65 @@ test("resolves timeout from the call, then the engine, then the configured limit
   expect(resolveTimeoutMinutes(undefined, { timeoutMinutes: 30 }, limits)).toBe(30);
   expect(resolveTimeoutMinutes(undefined, {}, limits)).toBe(limits.timeoutMinutes);
 });
+
+test.each([
+  ['{"engines":{"runner":{"adapter":oops}}}', "engines.runner.adapter"],
+  ['{"worktree":{"link":["deps",]}}', "worktree.link.1"],
+  ['{"limits":{"checkLines" 40}}', "limits.checkLines"],
+  ['{"engines":{"r\\u0075nner":{"args":["ok","\\q"]}}}', "engines.runner.args.1"],
+  ['{"check":"ok"} trailing', "$"],
+])("reports malformed JSON at the nearest known path %s (%s)", (contents, key) => {
+  writeFileSync(projectFile, contents);
+  expect(load).toThrow(ConfigError);
+  expect(load).toThrow(`${projectFile}: ${key}: Malformed JSON`);
+});
+
+test("validates replacements after merging simple fields and each merged section", () => {
+  writeConfig(globalFile, {
+    check: 42,
+    fallback: [42],
+    dataDir: false,
+    engines: { runner: { adapter: "generic" } },
+    worktree: { link: ["../outside"] },
+    limits: { checkLines: false },
+  });
+  writeConfig(projectFile, {
+    check: "verify",
+    fallback: ["runner"],
+    dataDir: "data",
+    engines: { runner: { adapter: "custom" } },
+    worktree: { link: ["deps"] },
+    limits: { checkLines: 50 },
+  });
+  expect(load().config).toMatchObject({
+    check: "verify",
+    fallback: ["runner"],
+    dataDir: join(repoRoot, "data"),
+    engines: { runner: { adapter: "custom" } },
+    worktree: { link: ["deps"] },
+    limits: { checkLines: 50 },
+  });
+});
+
+test.each([
+  [{ check: 42 }, {}, "check", true],
+  [{ check: "verify" }, { check: 42 }, "check", false],
+  [{ engines: { runner: { adapter: 42 } } }, { engines: {} }, "engines.runner.adapter", true],
+  [{ worktree: { link: [".."] } }, { worktree: { setup: "prepare" } }, "worktree.link.0", true],
+  [{ limits: { diffLines: "bad" } }, { limits: { checkLines: 50 } }, "limits.diffLines", true],
+  [{ limits: { diffLines: 150 } }, { limits: { diffLines: "bad" } }, "limits.diffLines", false],
+  [{ limits: { diffLines: 150 } }, { limits: null }, "limits", false],
+  [{ worktree: [] }, { worktree: undefined }, "worktree", true],
+] as const)("attributes the surviving invalid input %j with project %j", (global, project, key, inherited) => {
+  writeConfig(globalFile, global);
+  writeConfig(projectFile, project);
+  expect(load).toThrow(`${inherited ? globalFile : projectFile}: ${key}:`);
+});
+
+test("allows a project object to replace a malformed global section", () => {
+  writeConfig(globalFile, { limits: ["invalid"] });
+  writeConfig(projectFile, { limits: { timeoutMinutes: 37 } });
+  const { limits } = load().config;
+  expect(resolveTimeoutMinutes(undefined, undefined, limits)).toBe(37);
+  expect(limits.checkLines).toBe(40);
+});

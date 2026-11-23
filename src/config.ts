@@ -53,18 +53,12 @@ const defaultLimits = {
   maxSummaryChars: 8000,
 };
 
-const fileSchema = z.strictObject({
+const configSchema = z.strictObject({
   default: z.string().optional(),
   check: commandSchema.optional(),
-  engines: z.record(z.string(), engineSchema).optional(),
+  engines: z.record(z.string(), engineSchema),
   fallback: z.array(z.string()).optional(),
   dataDir: z.string().optional(),
-  worktree: worktreeSchema.optional(),
-  limits: limitsSchema.partial().optional(),
-});
-
-const configSchema = fileSchema.extend({
-  engines: fileSchema.shape.engines.unwrap(),
   worktree: worktreeSchema,
   limits: limitsSchema,
 });
@@ -79,7 +73,71 @@ export class ConfigError extends Error {
   }
 }
 
-function readConfig(file: string, platform: NodeJS.Platform) {
+// JSON.parse remains the parser. On failure, walk the tokens to locate the faulty value.
+function malformedKey(contents: string): string {
+  const whitespace = /[ \t\r\n]*/y;
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: JSON strings reject unescaped control characters.
+  const string = /"(?:[^"\\\u0000-\u001f]|\\(?:["\\/bfnrt]|u[\da-fA-F]{4}))*"/y;
+  const scalar = /true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
+  const key: (string | number)[] = [];
+  let offset = 0;
+
+  function token(pattern: RegExp): string | undefined {
+    whitespace.lastIndex = offset;
+    whitespace.exec(contents);
+    pattern.lastIndex = whitespace.lastIndex;
+    const match = pattern.exec(contents);
+    if (match) offset = pattern.lastIndex;
+    return match?.[0];
+  }
+
+  function value(): boolean {
+    if (token(/\{/y)) {
+      if (token(/\}/y)) return true;
+      for (;;) {
+        const name = token(string);
+        if (name === undefined) return false;
+        key.push(JSON.parse(name));
+        if (!token(/:/y) || !value()) return false;
+        if (token(/\}/y)) {
+          key.pop();
+          return true;
+        }
+        if (!token(/,/y)) return false;
+        key.pop();
+      }
+    }
+
+    if (token(/\[/y)) {
+      if (token(/\]/y)) return true;
+      for (let index = 0; ; index++) {
+        key.push(index);
+        if (!value()) return false;
+        if (token(/\]/y)) {
+          key.pop();
+          return true;
+        }
+        if (!token(/,/y)) return false;
+        key.pop();
+      }
+    }
+
+    return token(string) !== undefined || token(scalar) !== undefined;
+  }
+
+  try {
+    value();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+  }
+  return key.join(".") || "$";
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function readConfig(file: string): Record<string, unknown> | undefined {
   let contents: string;
   try {
     contents = readFileSync(file, "utf8");
@@ -94,21 +152,16 @@ function readConfig(file: string, platform: NodeJS.Platform) {
   try {
     parsed = JSON.parse(contents);
   } catch {
-    throw new ConfigError(file, "$", "Malformed JSON");
+    throw new ConfigError(file, malformedKey(contents), "Malformed JSON");
   }
+  if (!isObject(parsed)) throw new ConfigError(file, "$", "Expected an object");
+  return parsed;
+}
 
-  const result = fileSchema.safeParse(parsed);
-  if (!result.success) {
-    const issue = result.error.issues[0];
-    const key = issue.code === "unrecognized_keys" ? [...issue.path, issue.keys[0]] : issue.path;
-    throw new ConfigError(file, key.join(".") || "$", issue.message);
-  }
-
-  const path = platform === "win32" ? win32 : posix;
-  if (result.data.dataDir !== undefined && !path.isAbsolute(result.data.dataDir)) {
-    result.data.dataDir = path.resolve(path.dirname(file), result.data.dataDir);
-  }
-  return result.data;
+function mergeSection(global: unknown, project: unknown, defaults = {}) {
+  const selected = project === undefined ? global : project;
+  if (selected !== undefined && !isObject(selected)) return selected;
+  return { ...defaults, ...(isObject(global) ? global : {}), ...selected };
 }
 
 export function loadConfig({
@@ -121,26 +174,51 @@ export function loadConfig({
 } {
   const globalPath = globalConfigPath({ env, platform });
   const projectPath = projectConfigPath(repoRoot, { platform });
-  const global = readConfig(globalPath, platform);
-  const project = readConfig(projectPath, platform);
+  const global = readConfig(globalPath);
+  const project = readConfig(projectPath);
 
-  const config: Config = {
+  const merged = {
     ...global,
     ...project,
-    engines: { ...global?.engines, ...project?.engines },
-    worktree: { ...global?.worktree, ...project?.worktree },
-    limits: { ...defaultLimits, ...global?.limits, ...project?.limits },
+    engines: mergeSection(global?.engines, project?.engines),
+    worktree: mergeSection(global?.worktree, project?.worktree),
+    limits: mergeSection(global?.limits, project?.limits, defaultLimits),
   };
 
+  function sourceFor(key: PropertyKey[]): string {
+    const [section, field] = key;
+    const projectSection = project?.[String(section)];
+    const fromProject =
+      field !== undefined && ["engines", "worktree", "limits"].includes(String(section))
+        ? isObject(projectSection) && Object.hasOwn(projectSection, field)
+        : project !== undefined && Object.hasOwn(project, section);
+    return fromProject ? projectPath : globalPath;
+  }
+
+  function invalid(key: PropertyKey[], message: string): never {
+    throw new ConfigError(sourceFor(key), key.join(".") || "$", message);
+  }
+
+  const result = configSchema.safeParse(merged);
+  if (!result.success) {
+    const issue = result.error.issues[0];
+    const key = issue.code === "unrecognized_keys" ? [...issue.path, issue.keys[0]] : issue.path;
+    invalid(key, issue.message);
+  }
+  const config = result.data;
+  const path = platform === "win32" ? win32 : posix;
+  if (config.dataDir !== undefined && !path.isAbsolute(config.dataDir)) {
+    const file = sourceFor(["dataDir"]);
+    config.dataDir = path.resolve(path.dirname(file), config.dataDir);
+  }
+
   if (config.default !== undefined && !Object.hasOwn(config.engines, config.default)) {
-    const file = project?.default === undefined ? globalPath : projectPath;
-    throw new ConfigError(file, "default", "Unknown engine");
+    invalid(["default"], "Unknown engine");
   }
 
   for (const [index, name] of (config.fallback ?? []).entries()) {
     if (!Object.hasOwn(config.engines, name)) {
-      const file = project?.fallback === undefined ? globalPath : projectPath;
-      throw new ConfigError(file, `fallback.${index}`, "Unknown engine");
+      invalid(["fallback", index], "Unknown engine");
     }
   }
 
