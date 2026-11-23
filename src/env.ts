@@ -38,11 +38,11 @@ export function buildEngineEnv(
     [...base, ...(platform === "win32" ? windows : []), ...pass].map(normalize),
   );
   const entries: [string, string][] = [];
-  for (const [name, value] of Object.entries(source)) {
+  for (const name of Object.keys(source)) {
     const key = normalize(name);
-    if (value !== undefined && key !== "NO_COLOR" && allowed.has(key)) {
-      entries.push([name, value]);
-    }
+    if (key === "NO_COLOR" || !allowed.has(key)) continue;
+    const value = source[name];
+    if (value !== undefined) entries.push([name, value]);
   }
   return Object.fromEntries([...entries, ["NO_COLOR", "1"]]);
 }
