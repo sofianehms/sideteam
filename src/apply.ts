@@ -2,11 +2,29 @@ import { readFile, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { git } from "./git.js";
-import { appendEvent } from "./journal.js";
+import { appendEvent, readEvents } from "./journal.js";
 import { dataDir } from "./paths.js";
 import { promptInstruction } from "./prompt.js";
 import { type RunMeta, readMeta, writeMeta } from "./runs.js";
 import { mergeIntoCurrent, removeWorktree } from "./worktree.js";
+
+type Outcome = "apply" | "discard";
+
+// Records the outcome event unless the journal already has it. Returns false when the journal is unavailable.
+async function recordOutcome(directory: string, type: Outcome, id: string) {
+  try {
+    const { events } = await readEvents(directory);
+    if (!events.some((event) => event.type === type && event.id === id)) {
+      await appendEvent(directory, { type, ts: new Date().toISOString(), id });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const JOURNAL_WARNING =
+  " (journal unavailable: the event will be recorded on the next apply or discard retry)";
 
 const activeRepos = new Set<string>();
 
@@ -38,6 +56,7 @@ async function finalizeRun(
 export function applyDelegation(id: string, env = process.env) {
   return finalizeRun(id, env, async ({ directory, meta }) => {
     if (meta.status === "applied" || meta.status === "discarded") {
+      await recordOutcome(directory, meta.status === "applied" ? "apply" : "discard", id);
       throw new Error(`Delegation ${id} is already ${meta.status}`);
     }
 
@@ -55,19 +74,22 @@ export function applyDelegation(id: string, env = process.env) {
 
     await removeWorktree(meta.repo, { path: meta.worktree, branch: meta.branch }, "merged");
     await writeMeta(directory, { ...meta, status: "applied" });
-    await appendEvent(directory, { type: "apply", ts: new Date().toISOString(), id });
-    return `Applied ${id}: merge commit ${result.commit}, ${meta.files.length} files`;
+    const recorded = await recordOutcome(directory, "apply", id);
+    return `Applied ${id}: merge commit ${result.commit}, ${meta.files.length} files${recorded ? "" : JOURNAL_WARNING}`;
   });
 }
 
 export function discardDelegation(id: string, env = process.env) {
   return finalizeRun(id, env, async ({ directory, meta }) => {
-    if (meta.status === "applied") throw new Error(`Delegation ${id} is already applied`);
+    if (meta.status === "applied") {
+      await recordOutcome(directory, "apply", id);
+      throw new Error(`Delegation ${id} is already applied`);
+    }
     if (meta.status !== "discarded") {
       await removeWorktree(meta.repo, { path: meta.worktree, branch: meta.branch }, "force");
       await writeMeta(directory, { ...meta, status: "discarded" });
-      await appendEvent(directory, { type: "discard", ts: new Date().toISOString(), id });
     }
-    return `Discarded ${id}`;
+    const recorded = await recordOutcome(directory, "discard", id);
+    return `Discarded ${id}${recorded ? "" : JOURNAL_WARNING}`;
   });
 }

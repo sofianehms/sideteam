@@ -40,7 +40,11 @@ export async function appendEvent(dataDir: string, event: JournalEvent): Promise
     record.tokens = null;
   }
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
-  await appendFile(join(dataDir, "journal.jsonl"), `${JSON.stringify(record)}\n`, { mode: 0o600 });
+  const file = join(dataDir, "journal.jsonl");
+  // An interrupted write can leave an unterminated fragment; start a fresh line so it cannot swallow this event.
+  const existing = await readFile(file, "utf8").catch(() => "");
+  const prefix = existing !== "" && !existing.endsWith("\n") ? "\n" : "";
+  await appendFile(file, `${prefix}${JSON.stringify(record)}\n`, { mode: 0o600 });
 }
 
 export async function readEvents(dataDir: string) {

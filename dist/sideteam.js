@@ -28959,7 +28959,10 @@ async function appendEvent(dataDir2, event) {
     record2.tokens = null;
   }
   await mkdir(dataDir2, { recursive: true, mode: 448 });
-  await appendFile(join(dataDir2, "journal.jsonl"), `${JSON.stringify(record2)}
+  const file2 = join(dataDir2, "journal.jsonl");
+  const existing = await readFile(file2, "utf8").catch(() => "");
+  const prefix = existing !== "" && !existing.endsWith("\n") ? "\n" : "";
+  await appendFile(file2, `${prefix}${JSON.stringify(record2)}
 `, { mode: 384 });
 }
 async function readEvents(dataDir2) {
@@ -29286,6 +29289,18 @@ async function removeWorktree(repoRoot, { path, branch }, mode) {
 }
 
 // src/apply.ts
+async function recordOutcome(directory2, type, id) {
+  try {
+    const { events } = await readEvents(directory2);
+    if (!events.some((event) => event.type === type && event.id === id)) {
+      await appendEvent(directory2, { type, ts: (/* @__PURE__ */ new Date()).toISOString(), id });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+var JOURNAL_WARNING = " (journal unavailable: the event will be recorded on the next apply or discard retry)";
 var activeRepos = /* @__PURE__ */ new Set();
 async function finalizeRun(id, env, operation) {
   const root = await git(["rev-parse", "--show-toplevel"], {
@@ -29310,6 +29325,7 @@ async function finalizeRun(id, env, operation) {
 function applyDelegation(id, env = process.env) {
   return finalizeRun(id, env, async ({ directory: directory2, meta: meta3 }) => {
     if (meta3.status === "applied" || meta3.status === "discarded") {
+      await recordOutcome(directory2, meta3.status === "applied" ? "apply" : "discard", id);
       throw new Error(`Delegation ${id} is already ${meta3.status}`);
     }
     const prompt = await readFile4(join4(directory2, "runs", id, "prompt.md"), "utf8");
@@ -29325,19 +29341,22 @@ function applyDelegation(id, env = process.env) {
     }
     await removeWorktree(meta3.repo, { path: meta3.worktree, branch: meta3.branch }, "merged");
     await writeMeta(directory2, { ...meta3, status: "applied" });
-    await appendEvent(directory2, { type: "apply", ts: (/* @__PURE__ */ new Date()).toISOString(), id });
-    return `Applied ${id}: merge commit ${result.commit}, ${meta3.files.length} files`;
+    const recorded = await recordOutcome(directory2, "apply", id);
+    return `Applied ${id}: merge commit ${result.commit}, ${meta3.files.length} files${recorded ? "" : JOURNAL_WARNING}`;
   });
 }
 function discardDelegation(id, env = process.env) {
   return finalizeRun(id, env, async ({ directory: directory2, meta: meta3 }) => {
-    if (meta3.status === "applied") throw new Error(`Delegation ${id} is already applied`);
+    if (meta3.status === "applied") {
+      await recordOutcome(directory2, "apply", id);
+      throw new Error(`Delegation ${id} is already applied`);
+    }
     if (meta3.status !== "discarded") {
       await removeWorktree(meta3.repo, { path: meta3.worktree, branch: meta3.branch }, "force");
       await writeMeta(directory2, { ...meta3, status: "discarded" });
-      await appendEvent(directory2, { type: "discard", ts: (/* @__PURE__ */ new Date()).toISOString(), id });
     }
-    return `Discarded ${id}`;
+    const recorded = await recordOutcome(directory2, "discard", id);
+    return `Discarded ${id}${recorded ? "" : JOURNAL_WARNING}`;
   });
 }
 

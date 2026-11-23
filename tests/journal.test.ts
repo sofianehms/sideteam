@@ -22,6 +22,18 @@ test("appends events and counts malformed lines without dropping later events", 
   }
 });
 
+test("keeps the next event after an unterminated fragment", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "sideteam-journal-"));
+  const apply = { type: "apply", ts: "2026-11-21T12:00:00.000Z", id: "st-1" } as const;
+  try {
+    await writeFile(join(dir, "journal.jsonl"), '{"type":"apply","ts":"2026');
+    await appendEvent(dir, apply);
+    expect(await readEvents(dir)).toEqual({ events: [apply], malformed: 1 });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("journals only metadata after a delegation whose engine echoes its prompt and environment", async () => {
   const repo = createTmpRepo();
   const dataDir = join(repo.path, ".sideteam", "data");
