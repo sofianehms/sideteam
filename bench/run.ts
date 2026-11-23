@@ -6,7 +6,13 @@ import { buildEngineEnv } from "../src/env.js";
 import { run } from "../src/runner.js";
 import { copyPlugin } from "./lib/plugin-copy.js";
 import { appendTrial, readJson, readTrials, writeJson, writeReport } from "./lib/results.js";
-import { type BenchmarkEngine, planSeries, selectEngines } from "./lib/series.js";
+import {
+  type BenchmarkEngine,
+  planSeries,
+  requestedEngines,
+  selectEngines,
+  skippedEngines,
+} from "./lib/series.js";
 import { loadTasks } from "./lib/tasks.js";
 import { QuotaReached, runTrial } from "./lib/trial.js";
 
@@ -64,12 +70,15 @@ async function main(args: string[]) {
     if (!configs) throw new Error("Missing bench/engines.json");
     const engines = await selectEngines(options.series, configs, options.engines);
     signal.throwIfAborted();
-    const plan = planSeries(
-      loadTasks(join(root, "bench", "tasks")),
+    const tasks = loadTasks(join(root, "bench", "tasks"));
+    const plan = planSeries(tasks, options.series, engines, options.reps);
+    // Trials of requested but unavailable engines stay planned so the report shows partial coverage.
+    const skipped = planSeries(
+      tasks,
       options.series,
-      engines,
+      skippedEngines(requestedEngines(options.series, configs, options.engines), configs, engines),
       options.reps,
-    );
+    ).filter(({ engine }) => engine);
     const completed = new Set(readTrials(out).map(({ key }) => key));
     const pending = plan.filter(({ key }) => !completed.has(key));
     console.log(`skipping ${plan.length - pending.length} completed trials`);
@@ -79,6 +88,7 @@ async function main(args: string[]) {
       ...(readJson<string[]>(planFile) ?? []),
       ...completed,
       ...plan.map(({ key }) => key),
+      ...skipped.map(({ key }) => key),
     ]);
     writeJson(planFile, [...planned]);
 
@@ -110,7 +120,7 @@ async function main(args: string[]) {
             reason: error.message,
           });
           console.log(
-            `Quota reached after ${completed.size}/${planned.size} trials; rerun the same command later to resume.`,
+            `Quota reached after ${plan.filter(({ key }) => completed.has(key)).length}/${plan.length} trials; rerun the same command later to resume.`,
           );
           return 75;
         }

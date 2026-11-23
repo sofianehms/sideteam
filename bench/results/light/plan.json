@@ -1,0 +1,14 @@
+[
+  "01-ts-slugify|A||1",
+  "01-ts-slugify|B|codex|1",
+  "03-py-roman-numerals|A||1",
+  "03-py-roman-numerals|B|codex|1",
+  "05-ts-pagination|A||1",
+  "05-ts-pagination|B|codex|1",
+  "07-py-csv-quoting|A||1",
+  "07-py-csv-quoting|B|codex|1",
+  "09-ts-expiring-lru|A||1",
+  "09-ts-expiring-lru|B|codex|1",
+  "11-py-retry-backoff|A||1",
+  "11-py-retry-backoff|B|codex|1"
+]

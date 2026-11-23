@@ -1,5 +1,11 @@
 import { expect, test, vi } from "vitest";
-import { type BenchmarkEngine, planSeries, selectEngines } from "../../bench/lib/series.js";
+import {
+  type BenchmarkEngine,
+  planSeries,
+  requestedEngines,
+  selectEngines,
+  skippedEngines,
+} from "../../bench/lib/series.js";
 import type { Task } from "../../bench/lib/tasks.js";
 
 const tasks: Task[] = Array.from({ length: 12 }, (_, index) => {
@@ -46,4 +52,16 @@ test("explicit selection replaces defaults and skips unavailable engines with a 
   expect(selected.map(({ name }) => name)).toEqual(["gemini"]);
   expect(announce).toHaveBeenCalledWith('Skipping engine "local": offline');
   expect(planSeries(tasks, "light", selected)).toHaveLength(12);
+});
+
+test("requested engines that are unavailable remain planned for coverage", async () => {
+  const selected = await selectEngines("light", engines, undefined, vi.fn(), (name) =>
+    name === "opencode" ? { check: async () => ({ ok: false, message: "offline" }) } : available(),
+  );
+  const skipped = skippedEngines(requestedEngines("light", engines), engines, selected);
+  expect(skipped.map(({ name }) => name)).toEqual(["local"]);
+  const missing = planSeries(tasks, "light", skipped).filter(({ engine }) => engine);
+  expect(missing).toHaveLength(6);
+  expect(planSeries(tasks, "light", selected).length + missing.length).toBe(18);
+  expect(skippedEngines(["unknown"], engines, selected)).toEqual([]);
 });
