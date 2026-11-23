@@ -32,4 +32,4 @@ class Inventory:
             self._items[sku] = quantity
 
     def save(self):
-        self._path.write_text(json.dumps(self._items, ensure_ascii=False) + "\n", encoding="utf-8")
+        self._path.write_text(json.dumps(self._items, ensure_ascii=True) + "\n", encoding="utf-8")
