@@ -17,3 +17,6 @@ docs/
 .vscode/
 .idea/
 .DS_Store
+
+# Benchmark validation output
+/bench/.out/
