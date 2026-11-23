@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Shorten the README to a quick start and move the full tool, configuration and security details to `REFERENCE.md`.
 * Move the benchmark runner and its tasks out of the repository.
 * Estimate Claude token savings and measurement coverage from local transcripts in `/sideteam:stats`.
 
