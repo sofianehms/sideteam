@@ -10,6 +10,7 @@ export function registerDelegate(server: McpServer) {
       inputSchema: z.object({
         prompt: z.string().min(1),
         engine: z.string().optional(),
+        fallback: z.boolean().optional(),
         files: z.array(z.string()).optional(),
         check: z.string().optional(),
         timeoutMinutes: z.number().positive().max(240).optional(),

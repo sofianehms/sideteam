@@ -59,6 +59,7 @@ const configSchema = z.strictObject({
   check: commandSchema.optional(),
   engines: z.record(z.string(), engineSchema),
   fallback: z.array(z.string()).optional(),
+  retries: z.number().int().min(0).max(3).default(1),
   dataDir: z.string().optional(),
   worktree: worktreeSchema,
   limits: limitsSchema,

@@ -77,6 +77,19 @@ describe("worktrees", () => {
     expect(await main("status", "--porcelain")).toBe("");
   });
 
+  it("recreates a worktree at its original base after HEAD advances", async () => {
+    const first = await delegate();
+    await removeWorktree(repo.path, first, "force");
+    writeFileSync(join(repo.path, "README.md"), "# New HEAD\n");
+    await main("commit", "-am", "Advance HEAD");
+
+    const recreated = await createWorktree(repo.path, first.id, { links: [], base: first.base });
+    expect(recreated).toEqual(first);
+    expect((await main("rev-parse", recreated.branch)).trim()).toBe(first.base);
+    expect(readFileSync(join(recreated.path, "README.md"), "utf8")).toBe("# Test repository\n");
+    expect(readFileSync(join(repo.path, "README.md"), "utf8")).toBe("# New HEAD\n");
+  });
+
   it("commits changed files, reports text and binary stats, and skips empty commits", async () => {
     const worktree = await createWorktree(repo.path, newId(), { links: [] });
     expect(await commitAll(worktree.path, "Empty", { exclude: [] })).toBe(false);

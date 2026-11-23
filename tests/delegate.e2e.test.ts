@@ -32,7 +32,7 @@ async function delegate(
   const dataDir = join(repo.path, ".sideteam", "data");
   await writeFile(
     join(repo.path, ".sideteam.json"),
-    JSON.stringify({ dataDir, engines: { a: engine }, check, ...config }),
+    JSON.stringify({ retries: 0, dataDir, engines: { a: engine }, check, ...config }),
   );
   git("add", ".");
   git("commit", "-m", "Configure delegation");

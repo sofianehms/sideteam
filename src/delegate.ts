@@ -3,19 +3,21 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { getAdapter } from "./adapters/index.js";
 import type { EngineResult } from "./adapters/types.js";
 import { parseCommand, runCommandIn } from "./check.js";
-import { effectiveLinks, loadConfig, resolveTimeoutMinutes } from "./config.js";
+import { type Config, effectiveLinks, loadConfig, resolveTimeoutMinutes } from "./config.js";
 import { buildEngineEnv } from "./env.js";
+import { buildChain, nextAction, retryPrompt } from "./fallback.js";
 import { git } from "./git.js";
 import { dataDir } from "./paths.js";
 import { framePrompt } from "./prompt.js";
 import { run } from "./runner.js";
-import { createRunDir, writeMeta } from "./runs.js";
+import { createRunDir, publishRunArtifacts, type RunAttempt, writeMeta } from "./runs.js";
 import { type DelegationOutcome, renderSummary } from "./summary.js";
-import { changes, commitAll, createWorktree, newId } from "./worktree.js";
+import { changes, commitAll, createWorktree, newId, removeWorktree } from "./worktree.js";
 
 export interface DelegationInput {
   prompt: string;
   engine?: string;
+  fallback?: boolean;
   files?: string[];
   check?: string;
   timeoutMinutes?: number;
@@ -43,6 +45,100 @@ async function contextFiles(root: string, files: string[]): Promise<string[]> {
       return name;
     }),
   );
+}
+
+async function runAttempt({
+  id,
+  repo,
+  worktree,
+  runDir,
+  config,
+  cfg,
+  command,
+  prompt,
+  timeoutMinutes,
+  prepare,
+  env,
+}: {
+  id: string;
+  repo: string;
+  worktree: Awaited<ReturnType<typeof createWorktree>>;
+  runDir: string;
+  config: Config;
+  cfg: Config["engines"][string];
+  command: NonNullable<Config["check"]>;
+  prompt: string;
+  timeoutMinutes?: number;
+  prepare: boolean;
+  env: NodeJS.ProcessEnv;
+}) {
+  const logPath = join(runDir, "engine.log");
+  const checkOptions = {
+    timeoutMs: config.limits.checkTimeoutMinutes * 60_000,
+    lines: config.limits.checkLines,
+  };
+  let status: DelegationOutcome["status"] = "engine_failed";
+  let reason: string | null = null;
+  let result: EngineResult | undefined;
+  let check: DelegationOutcome["check"];
+
+  if (prepare && config.worktree.setup !== undefined) {
+    const setup = await runCommandIn(worktree.path, config.worktree.setup, {
+      ...checkOptions,
+      logFile: join(runDir, "setup.log"),
+      lines: 0,
+    });
+    if (!setup.passed) reason = `worktree setup failed (exit ${setup.code})`;
+  }
+
+  if (reason === null) {
+    const promptFile = join(runDir, "prompt.md");
+    await writeFile(promptFile, prompt);
+    try {
+      const adapter = getAdapter(cfg.adapter);
+      const cmd = adapter.buildCommand(
+        { id, prompt, promptFile, worktree: worktree.path, runDir, model: cfg.model },
+        cfg,
+      );
+      const raw = await run(
+        { ...cmd, env: buildEngineEnv(cfg.env ?? [], env) },
+        {
+          logFile: logPath,
+          timeoutMs: resolveTimeoutMinutes(timeoutMinutes, cfg, config.limits) * 60_000,
+        },
+      );
+      if (raw.timedOut) {
+        status = "timeout";
+        reason = "engine timed out";
+      }
+      result = adapter.parseResult({ ...raw, runDir });
+      reason ??= raw.spawnError ?? (result.ok ? null : (result.error ?? "engine failed"));
+    } catch (error) {
+      reason ??= error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  await commitAll(worktree.path, `Delegate ${id}`, { exclude: worktree.linked });
+  if (reason === null) {
+    const diff = await git(["diff", "--quiet", `${worktree.base}..${worktree.branch}`, "--"], {
+      cwd: repo,
+      allowFailure: true,
+    });
+    if (diff.code === 0) {
+      reason = "no changes produced";
+    } else if (diff.code === 1) {
+      const checked = await runCommandIn(worktree.path, command, {
+        ...checkOptions,
+        logFile: join(runDir, "check.log"),
+      });
+      check = { command, code: checked.code, tail: checked.tail };
+      status = checked.timedOut ? "timeout" : checked.passed ? "success" : "check_failed";
+      if (checked.timedOut) reason = "check timed out";
+    } else {
+      throw new Error(`could not inspect committed changes: ${diff.stderr.trim()}`);
+    }
+  }
+  return { status, reason, result, check, logPath };
 }
 
 export async function runDelegation(
@@ -76,8 +172,8 @@ export async function runDelegation(
     if (!Object.hasOwn(config.engines, engine)) {
       throw new Error(`unknown engine "${engine}": configured engines: ${names.join(", ")}`);
     }
-    const cfg = config.engines[engine];
-    const adapter = getAdapter(cfg.adapter);
+    getAdapter(config.engines[engine].adapter);
+    const chain = buildChain(engine, input.fallback === false ? undefined : config.fallback);
     const command = input.check ?? config.check;
     if (command === undefined) {
       throw new Error("no check configured: pass check or set it in .sideteam.json");
@@ -87,111 +183,95 @@ export async function runDelegation(
 
     const id = newId();
     const directory = dataDir(config, { env });
-    const runDir = await createRunDir(directory, id);
-    // Worktree creation registers its directory in Git's local exclude file.
-    const worktree = await createWorktree(repo, id, { links: effectiveLinks(config) });
-    const logPath = join(runDir, "engine.log");
-    const checkOptions = {
-      timeoutMs: config.limits.checkTimeoutMinutes * 60_000,
-      lines: config.limits.checkLines,
-    };
-    let status: DelegationOutcome["status"] = "engine_failed";
-    let reason: string | null = null;
-    let result: EngineResult | undefined;
-    let check: DelegationOutcome["check"];
-
-    if (config.worktree.setup !== undefined) {
-      const setup = await runCommandIn(worktree.path, config.worktree.setup, {
-        ...checkOptions,
-        logFile: join(runDir, "setup.log"),
-        lines: 0,
-      });
-      if (!setup.passed) reason = `worktree setup failed (exit ${setup.code})`;
-    }
-
-    if (reason === null) {
-      const prompt = framePrompt({ prompt: input.prompt, files, check: command });
-      const promptFile = join(runDir, "prompt.md");
-      await writeFile(promptFile, prompt);
-      try {
-        const cmd = adapter.buildCommand(
-          { id, prompt, promptFile, worktree: worktree.path, runDir, model: cfg.model },
-          cfg,
-        );
-        const raw = await run(
-          { ...cmd, env: buildEngineEnv(cfg.env ?? [], env) },
-          {
-            logFile: logPath,
-            timeoutMs: resolveTimeoutMinutes(input.timeoutMinutes, cfg, config.limits) * 60_000,
-          },
-        );
-        if (raw.timedOut) {
-          status = "timeout";
-          reason = "engine timed out";
-        }
-        result = adapter.parseResult({ ...raw, runDir });
-        reason ??= raw.spawnError ?? (result.ok ? null : (result.error ?? "engine failed"));
-      } catch (error) {
-        reason ??= error instanceof Error ? error.message : String(error);
-      }
-    }
-
-    await commitAll(worktree.path, `Delegate ${id}`, { exclude: worktree.linked });
-    if (reason === null) {
-      const diff = await git(["diff", "--quiet", `${worktree.base}..${worktree.branch}`, "--"], {
-        cwd: repo,
-        allowFailure: true,
-      });
-      if (diff.code === 0) {
-        reason = "no changes produced";
-      } else if (diff.code === 1) {
-        const checked = await runCommandIn(worktree.path, command, {
-          ...checkOptions,
-          logFile: join(runDir, "check.log"),
-        });
-        check = { command, code: checked.code, tail: checked.tail };
-        status = checked.passed ? "success" : "check_failed";
-        if (checked.timedOut) reason = "check timed out";
-      } else {
-        throw new Error(`could not inspect committed changes: ${diff.stderr.trim()}`);
-      }
-    }
-    const changed = await changes(repo, worktree.base, worktree.branch);
-    const durationMs = Date.now() - started;
-    await writeMeta(directory, {
-      id,
-      repo,
-      base: worktree.base,
-      branch: worktree.branch,
-      worktree: worktree.path,
-      links: worktree.linked,
-      engine,
-      adapter: cfg.adapter,
-      model: cfg.model ?? null,
-      status,
-      reason,
-      startedAt,
-      durationMs,
-      tokens: result?.tokens ?? null,
-      files: changed.files,
-      check: check ? { command, code: check.code } : null,
-    });
-    return renderSummary(
-      {
+    const links = effectiveLinks(config);
+    let worktree = await createWorktree(repo, id, { links });
+    const attempts: RunAttempt[] = [];
+    const originalPrompt = framePrompt({ prompt: input.prompt, files, check: command });
+    let prompt = originalPrompt;
+    let engineIndex = 0;
+    let attempt = 1;
+    for (;;) {
+      const selected = chain[engineIndex];
+      const cfg = config.engines[selected];
+      const attemptStarted = Date.now();
+      const runDir = await createRunDir(directory, id, attempts.length + 1);
+      const { status, reason, result, check, logPath } = await runAttempt({
         id,
-        engine,
+        repo,
+        worktree,
+        runDir,
+        config,
+        cfg,
+        command,
+        prompt,
+        timeoutMinutes: input.timeoutMinutes,
+        prepare: attempt === 1,
+        env,
+      });
+      const tokens = result?.tokens ?? null;
+      attempts.push({
+        engine: selected,
+        attempt,
+        status,
+        reason,
+        durationMs: Date.now() - attemptStarted,
+        tokens,
+      });
+
+      switch (nextAction(status, attempt, config.retries, engineIndex + 1 < chain.length)) {
+        case "retry":
+          prompt = retryPrompt(originalPrompt, check?.tail ?? []);
+          attempt++;
+          continue;
+        case "fallback":
+          await removeWorktree(repo, worktree, "force");
+          worktree = await createWorktree(repo, id, { links, base: worktree.base });
+          engineIndex++;
+          attempt = 1;
+          prompt = originalPrompt;
+          continue;
+      }
+
+      await publishRunArtifacts(directory, id, runDir);
+      const changed = await changes(repo, worktree.base, worktree.branch);
+      const durationMs = Date.now() - started;
+      await writeMeta(directory, {
+        id,
+        repo,
+        base: worktree.base,
+        branch: worktree.branch,
+        worktree: worktree.path,
+        links: worktree.linked,
+        engine: selected,
+        adapter: cfg.adapter,
         model: cfg.model ?? null,
         status,
         reason,
+        startedAt,
         durationMs,
-        check,
-        engineMessage: result?.message,
-        base: worktree.base,
-        logPath,
-        ...changed,
-      },
-      config.limits,
-    );
+        tokens,
+        attempts,
+        files: changed.files,
+        check: check ? { command, code: check.code } : null,
+      });
+      return renderSummary(
+        {
+          id,
+          engine: selected,
+          model: cfg.model ?? null,
+          status,
+          reason,
+          durationMs,
+          check,
+          engineMessage: result?.message,
+          base: worktree.base,
+          logPath,
+          attempts,
+          ...changed,
+        },
+        config.limits,
+      );
+    }
   } finally {
     clearInterval(timer);
   }
