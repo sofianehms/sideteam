@@ -103,33 +103,56 @@ test("returns a detection proposal that loads once saved", async () => {
   }
 });
 
-test("redacts configured variable values from executable diagnostics", async () => {
+test("omits a detection proposal derived from an inherited variable value", async () => {
   const { path, cleanup } = createTmpRepo();
-  const setting = "sample-sensitive-setting";
+  vi.stubEnv("PATH", path);
+  vi.stubEnv("USER", "sample-private-model");
+  try {
+    await writeFile(join(path, "opencode"), '#!/bin/sh\nprintf "1.2.3\\n"\n', { mode: 0o755 });
+    const executable = join(path, "ollama");
+    await writeFile(executable, '#!/bin/sh\nprintf "NAME\\npublic-model\\n"\n', { mode: 0o755 });
+    expect(JSON.parse(await inspectEngines({ detect: true }, path))).toMatchObject({
+      engines: { local: { model: "ollama/public-model" } },
+    });
+
+    await writeFile(executable, '#!/bin/sh\nprintf "NAME\\n%s\\n" "$USER"\n');
+    expect(JSON.parse(await inspectEngines({ detect: true }, path))).toEqual({ engines: {} });
+  } finally {
+    vi.unstubAllEnvs();
+    cleanup();
+  }
+});
+
+test.each([
+  { variable: "TEST_SETTING", env: ["TEST_SETTING"], output: "stderr" },
+  { variable: "USER", env: undefined, output: "stderr" },
+  { variable: "USER", env: undefined, output: "version" },
+])("redacts $variable from executable $output", async ({ variable, env, output }) => {
+  const { path, cleanup } = createTmpRepo();
+  const setting = "987.654.321+sample";
   vi.stubEnv("XDG_CONFIG_HOME", path);
   vi.stubEnv("APPDATA", path);
-  vi.stubEnv("TEST_SETTING", setting);
+  vi.stubEnv(variable, setting);
+  const script =
+    output === "stderr"
+      ? "console.error(process.env[process.argv[1]]); process.exit(1)"
+      : "console.log(process.env[process.argv[1]])";
   try {
     await writeFile(
       join(path, ".sideteam.json"),
       JSON.stringify({
         engines: {
-          broken: {
+          checked: {
             adapter: "codex",
-            bin: [
-              process.execPath,
-              "-e",
-              "console.error(process.env.TEST_SETTING ?? ''); process.exit(1)",
-              "--",
-            ],
-            env: ["TEST_SETTING"],
+            bin: [process.execPath, "-e", script, "--", variable],
+            env,
           },
         },
       }),
     );
     const text = await inspectEngines({}, path);
-    expect(text).toContain("broken | codex | - | cloud | yes | no | - |");
-    expect(text).toContain("[redacted]");
+    const status = output === "stderr" ? "no | - | [redacted]" : "yes | [redacted] | -";
+    expect(text).toContain(`checked | codex | - | cloud | yes | ${status}`);
     expect(text).not.toContain(setting);
   } finally {
     vi.unstubAllEnvs();

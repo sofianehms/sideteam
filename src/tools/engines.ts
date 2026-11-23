@@ -27,12 +27,16 @@ async function checkEngine(check: () => Promise<CheckResult>): Promise<CheckResu
   }
 }
 
-function redact(value: string | undefined, variables: string[]): string | undefined {
-  const values = variables
-    .map((name) => process.env[name])
-    .filter((value): value is string => Boolean(value))
+function environmentRedactor(env: Record<string, string>) {
+  // NO_COLOR is set to a fixed value by buildEngineEnv.
+  const { NO_COLOR: _noColor, ...inherited } = env;
+  const values = Object.values(inherited)
+    .filter(Boolean)
     .sort((a, b) => b.length - a.length);
-  return values.reduce((text, secret) => text?.replaceAll(secret, "[redacted]"), value);
+  const pattern = values.length
+    ? new RegExp(values.map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g")
+    : undefined;
+  return (text: string | undefined) => (pattern ? text?.replace(pattern, "[redacted]") : text);
 }
 
 function cell(value: string | undefined, limit = 64): string {
@@ -49,12 +53,13 @@ export async function inspectEngines(
   const repoRoot = root.code === 0 ? root.stdout.replace(/\r?\n$/, "") : cwd;
   if (detect) {
     const env = buildEngineEnv([]);
+    const redact = environmentRedactor(env);
     const run: DetectContext["run"] = (bin, args, timeout) =>
       new Promise((resolve) => {
         execFile(bin, args, { cwd: repoRoot, env, timeout, windowsHide: true }, (error, stdout) => {
           resolve({
             code: error ? (typeof error.code === "number" ? error.code : null) : 0,
-            stdout,
+            stdout: redact(stdout) === stdout ? stdout : "",
           });
         });
       });
@@ -72,6 +77,7 @@ export async function inspectEngines(
     const adapters = allAdapters();
     const rows = await Promise.all(
       Object.entries(config.engines).map(async ([name, cfg]) => {
+        const redact = environmentRedactor(buildEngineEnv(cfg.env ?? []));
         const adapter = adapters.find((adapter) => adapter.name === cfg.adapter);
         const result = adapter
           ? await checkEngine(() => adapter.check(cfg))
@@ -83,14 +89,8 @@ export async function inspectEngines(
           cfg.privacy,
           config.default === name ? "yes" : "no",
           result.deferred ? "unknown" : result.ok ? "yes" : "no",
-          cell(redact(result.version, cfg.env ?? []), 32),
-          cell(
-            redact(result.message, cfg.env ?? [])
-              ?.trimEnd()
-              .split(/\r?\n/)
-              .at(-1),
-            96,
-          ),
+          cell(redact(result.version), 32),
+          cell(redact(result.message)?.trimEnd().split(/\r?\n/).at(-1), 96),
         ].join(" | ");
       }),
     );

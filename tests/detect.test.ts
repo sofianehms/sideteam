@@ -19,7 +19,10 @@ test("aggregates only found proposals and carries variable names", async () => {
     expect(input).toEqual(context);
     return { found: true, proposal: { name: "primary", config } };
   });
-  const absent = adapter("second", async () => ({ found: false }));
+  const absent = adapter("second", async () => ({
+    found: false,
+    proposal: { name: "secondary", config: { adapter: "second" } },
+  }));
 
   const result = await detectAll({ ...context, adapters: [found, absent] });
   expect(result).toEqual({ default: "primary", engines: { primary: config } });
