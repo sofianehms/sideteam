@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { git } from "./git.js";
 import { dataDir } from "./paths.js";
+import { promptInstruction } from "./prompt.js";
 import { type RunMeta, readMeta, writeMeta } from "./runs.js";
 import { mergeIntoCurrent, removeWorktree } from "./worktree.js";
 
@@ -40,9 +41,7 @@ export function applyDelegation(id: string, env = process.env) {
     }
 
     const prompt = await readFile(join(directory, "runs", id, "prompt.md"), "utf8");
-    const marker = "\n\nInstruction:\n";
-    const start = prompt.indexOf(marker);
-    const instruction = start === -1 ? prompt : prompt.slice(start + marker.length);
+    const instruction = promptInstruction(prompt);
     const title = Array.from(instruction.split(/\r?\n/, 1)[0]).slice(0, 60).join("");
     const result = await mergeIntoCurrent(meta.repo, {
       base: meta.base,

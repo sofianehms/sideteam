@@ -181,8 +181,9 @@ export async function mergeIntoCurrent(
   if (head.code === 1) return { ok: false, reason: "detached-head", files: [] };
   if (head.code !== 0) throw new GitError(["symbolic-ref", "-q", "HEAD"], head.code, head.stderr);
 
-  const mergeHead = await git(["rev-parse", "--git-path", "MERGE_HEAD"], { cwd });
-  if (await ifMissing(lstat(resolve(cwd, mergeHead.stdout.replace(/\r?\n$/, ""))))) {
+  const { stdout } = await git(["rev-parse", "--git-path", "MERGE_HEAD"], { cwd });
+  const mergeHead = resolve(cwd, stdout.replace(/\r?\n$/, ""));
+  if (await ifMissing(lstat(mergeHead))) {
     return { ok: false, reason: "merge-in-progress", files: [] };
   }
 
@@ -230,10 +231,11 @@ export async function mergeIntoCurrent(
       cwd,
     );
   } catch (error) {
+    if (!(await ifMissing(lstat(mergeHead)))) throw error;
     const conflicts = await git(["diff", "--name-only", "--diff-filter=U", "-z", "--"], { cwd });
     const files = paths(conflicts.stdout);
-    if (files.length === 0) throw error;
     await git(["merge", "--abort"], { cwd });
+    if (files.length === 0) throw error;
     return { ok: false, reason: "conflict", files };
   } finally {
     if (stagedTree) await git(["reset", "-q", stagedTree, "--", ...staged], { cwd });

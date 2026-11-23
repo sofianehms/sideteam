@@ -163,6 +163,48 @@ test("aborts a real conflict and keeps the branch and worktree", async () => {
   expect(await readMeta(dataDir, meta.id)).toEqual(meta);
 });
 
+test.each([
+  "pre-merge-commit",
+  "commit-msg",
+])("rolls back when %s rejects the merge", async (hook) => {
+  const meta = await delegate();
+  const readme = join(repo.path, "README.md");
+  const original = await readFile(readme, "utf8");
+  const local = join(repo.path, "local.txt");
+  await writeFile(local, "Staged content\n");
+  git("add", "local.txt");
+  await writeFile(local, "Working copy\n");
+  const head = git("rev-parse", "HEAD");
+  const branch = git("rev-parse", meta.branch);
+  const status = git("status", "--porcelain");
+  const hooks = join(repo.path, ".git", "test-hooks");
+  await mkdir(hooks);
+  git("config", "--local", "core.hooksPath", hooks);
+  await writeFile(join(hooks, hook), "#!/bin/sh\necho 'Merge rejected by hook' >&2\nexit 1\n", {
+    mode: 0o755,
+  });
+
+  expect(await call("apply", meta.id)).toMatchObject({
+    isError: true,
+    content: [{ type: "text", text: expect.stringContaining("Merge rejected by hook") }],
+  });
+  await expect(lstat(join(repo.path, ".git", "MERGE_HEAD"))).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+  expect(git("rev-parse", "HEAD")).toBe(head);
+  expect(git("rev-parse", meta.branch)).toBe(branch);
+  expect(git("status", "--porcelain")).toBe(status);
+  expect(git("show", ":local.txt")).toBe("Staged content\n");
+  expect(await readFile(local, "utf8")).toBe("Working copy\n");
+  expect(await readFile(readme, "utf8")).toBe(original);
+  expect(await readFile(join(meta.worktree, "README.md"), "utf8")).toBe(changed);
+  expect(await readMeta(dataDir, meta.id)).toEqual(meta);
+
+  git("config", "--local", "--unset", "core.hooksPath");
+  expect((await call("apply", meta.id))?.isError).toBeFalsy();
+  await expectRemoved(meta, "applied");
+});
+
 test("discards a delegation without deleting the target of its dependency link", async () => {
   await mkdir(join(repo.path, "node_modules"));
   const dependency = join(repo.path, "node_modules", "dependency.txt");
