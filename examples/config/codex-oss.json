@@ -1,0 +1,9 @@
+{
+  "engines": {
+    "local": {
+      "adapter": "codex",
+      "options": { "oss": true, "localProvider": "ollama" },
+      "privacy": "local"
+    }
+  }
+}
