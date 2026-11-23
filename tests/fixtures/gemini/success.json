@@ -1,0 +1,13 @@
+{
+  "response": "Updated the file.",
+  "stats": {
+    "models": {
+      "gemini-2.5-flash": {
+        "tokens": { "input": 12, "prompt": 15, "candidates": 4, "cached": 3, "total": 19 }
+      },
+      "gemini-2.5-pro": {
+        "tokens": { "input": 8, "prompt": 10, "candidates": 2, "cached": 2, "total": 12 }
+      }
+    }
+  }
+}

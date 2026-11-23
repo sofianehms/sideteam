@@ -167,7 +167,7 @@ const refusals = [
   [
     { engines: { a: { adapter: "missing" } } },
     {},
-    'Unknown adapter "missing". Known adapters: codex, generic, opencode',
+    'Unknown adapter "missing". Known adapters: codex, gemini, generic, opencode',
   ],
   [{}, { files: ["../outside"] }, "context file is outside the repository: ../outside"],
 ] as const;
