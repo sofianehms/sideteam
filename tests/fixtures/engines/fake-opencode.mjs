@@ -13,13 +13,14 @@ if (args.length === 1 && args[0] === "--version") {
   );
   assert.match(model, /^ollama\/.+/);
   assert.equal(realpathSync(dir), realpathSync(process.cwd()));
-  assert.ok(args.length > 8);
-  assert.equal(readFileSync(0, "utf8"), "");
+  const prompt = readFileSync(0, "utf8");
+  assert.ok(prompt.length > 0);
+  assert.equal(args.includes(prompt), false);
   assert.equal(
     Object.keys(process.env).some((key) => /^OPENCODE_/i.test(key)),
     false,
   );
-  writeFileSync(join(dir, "received-prompt.txt"), args.at(-1));
+  writeFileSync(join(dir, "received-prompt.txt"), prompt);
   const failed = process.env.FAKE_MODE === "fail";
   const fixture = new URL(`../opencode/run-${failed ? "error" : "success"}.jsonl`, import.meta.url);
   process.stdout.write(readFileSync(fixture));

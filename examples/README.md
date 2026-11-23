@@ -40,7 +40,7 @@ For OpenCode, register a provider named `ollama` and declare the downloaded tag 
 
 Copy the chosen JSON preset to `.sideteam.json` in the repository root. If that file already exists, merge in the `local` engine entry. Configure the project's verification command under `check` and select the `local` engine when delegating.
 
-The OpenCode adapter passes the prompt as a process argument. It can be visible in the process list and is limited to 30,000 characters.
+The OpenCode adapter sends the prompt on standard input (checked with OpenCode 1.19.6), so it does not appear in the process list.
 
 <br/>
 

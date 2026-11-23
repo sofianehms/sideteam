@@ -1,1 +1,1 @@
-{"type":"error","error":{"name":"APIError","data":{"message":"Request failed."}}}
+{"type":"error","timestamp":1795412794790,"sessionID":"ses_df90ee48bffeJ29Xhwx54upnNJ","error":{"name":"UnknownError","data":{"message":"Unexpected server error. Check server logs for details.","ref":"err_22d49703"}}}

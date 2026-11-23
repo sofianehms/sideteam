@@ -39,12 +39,13 @@ function raw(stdout: string, code: number | null = 0): RawOutput {
   return { code, signal: null, timedOut: false, stdout, stderr: "", runDir: job.runDir };
 }
 
-test("builds the exact command, placing extras before the positional prompt", () => {
+test("builds the exact command and sends the prompt on standard input", () => {
   const args = ["run", "-m", config.model, "--format", "json", "--dir", job.worktree, "--auto"];
   expect(adapter.buildCommand(job, config)).toMatchObject({
     bin: "opencode",
-    args: [...args, job.prompt],
+    args,
     cwd: job.worktree,
+    stdin: job.prompt,
   });
   const command = adapter.buildCommand(
     { ...job, model: "ollama/devstral-small", prompt: "--help" },
@@ -55,8 +56,8 @@ test("builds the exact command, placing extras before the positional prompt", ()
     },
   );
   args[2] = "ollama/devstral-small";
-  expect(command.args).toEqual([bin[1], ...args, "--title", "Review", "--", "--help"]);
-  expect(command.stdin).toBeUndefined();
+  expect(command.args).toEqual([bin[1], ...args, "--title", "Review"]);
+  expect(command.stdin).toBe("--help");
   expect(Object.keys(command.env).filter((key) => /^OPENCODE_/i.test(key))).toEqual([]);
 });
 
@@ -72,12 +73,11 @@ test.each([
   );
 });
 
-test("enforces the 30,000-character positional prompt limit", () => {
-  const prompt = "x".repeat(30_000);
-  expect(adapter.buildCommand({ ...job, prompt }, config).args.at(-1)).toBe(prompt);
-  expect(() => adapter.buildCommand({ ...job, prompt: `${prompt}x` }, config)).toThrow(
-    "prompt too long for opencode (max 30000 characters)",
-  );
+test("keeps long prompts out of the arguments", () => {
+  const prompt = "x".repeat(40_000);
+  const command = adapter.buildCommand({ ...job, prompt }, config);
+  expect(command.stdin).toBe(prompt);
+  expect(command.args).not.toContain(prompt);
 });
 
 test("reads the last step's text parts and sums token counts", async () => {
@@ -85,8 +85,8 @@ test("reads the last step's text parts and sums token counts", async () => {
     adapter.parseResult(raw(`unstructured line\r\nnull\r\n${await fixture("success")}`)),
   ).toEqual({
     ok: true,
-    message: "Updated the file.\nThe change is ready for review.",
-    tokens: { input: 20, output: 9, cached: 5 },
+    message: "DONE",
+    tokens: { input: 11782, output: 36, cached: 11264 },
   });
 });
 
@@ -104,7 +104,7 @@ test.each([0, 1])("reports a structured error with exit code %i", async (code) =
     ok: false,
     message: "",
     tokens: null,
-    error: "Request failed.",
+    error: "Unexpected server error. Check server logs for details.",
   });
 });
 

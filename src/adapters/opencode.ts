@@ -80,9 +80,6 @@ export const opencodeAdapter: EngineAdapter = {
     if (!model || !/^[^/\s]+\/\S+$/.test(model) || model.startsWith("-")) {
       throw new Error("opencode engine requires model as provider/model");
     }
-    if (job.prompt.length > 30_000) {
-      throw new Error("prompt too long for opencode (max 30000 characters)");
-    }
 
     const { bin, prefix } = resolveBin(cfg, name);
     const args = [
@@ -97,9 +94,8 @@ export const opencodeAdapter: EngineAdapter = {
       "--auto",
       ...(cfg.args ?? []),
     ];
-    if (job.prompt.startsWith("-")) args.push("--");
-    args.push(job.prompt);
-    return { bin, args, cwd: job.worktree, env: buildEngineEnv(cfg.env ?? []) };
+    // OpenCode reads the prompt from standard input, so it never appears in the process list.
+    return { bin, args, cwd: job.worktree, env: buildEngineEnv(cfg.env ?? []), stdin: job.prompt };
   },
 
   parseResult(raw) {
