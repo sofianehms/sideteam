@@ -24,7 +24,7 @@
     "@modelcontextprotocol/client": "2.4.0",
     "@types/node": "20.19.40",
     "@vitest/coverage-v8": "4.1.9",
-    "esbuild": "0.25.12",
+    "esbuild": "0.28.2",
     "typescript": "5.9.3",
     "vitest": "4.1.9"
   }
