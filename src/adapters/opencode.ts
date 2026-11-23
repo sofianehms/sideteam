@@ -13,8 +13,8 @@ function versionFrom(stdout: string): string | undefined {
 }
 
 function preferredModel(stdout: string): string | undefined {
+  // Discovery can blank the header, so skip the first line before trimming rows.
   const models = stdout
-    .trim()
     .split(/\r?\n/)
     .slice(1)
     .map((line) => line.trim().split(/\s+/)[0])
