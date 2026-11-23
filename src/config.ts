@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { posix, win32 } from "node:path";
 import { z } from "zod";
+import { hasRequiredCommand } from "./adapters/generic.js";
 import { globalConfigPath, type PathOptions, projectConfigPath } from "./paths.js";
 
 const commandSchema = z.union([z.string(), z.array(z.string())]);
@@ -16,7 +17,7 @@ const engineSchema = z
     privacy: z.enum(["local", "cloud"]).default("cloud"),
     timeoutMinutes: z.number().positive().optional(),
   })
-  .refine((engine) => engine.adapter !== "generic" || engine.command !== undefined, {
+  .refine(hasRequiredCommand, {
     path: ["command"],
     message: "Required for the generic adapter",
   });
@@ -64,7 +65,7 @@ const configSchema = z.strictObject({
 });
 
 export type Config = z.infer<typeof configSchema>;
-export type EngineConfig = z.infer<typeof engineSchema>;
+export type EngineConfig = z.input<typeof engineSchema>;
 
 export class ConfigError extends Error {
   constructor(file: string, key: string, message: string) {
