@@ -1,8 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Config } from "./config.js";
 import type { ChangedFile, DelegationStatus } from "./summary.js";
+
+export interface RunAttempt {
+  engine: string;
+  attempt: number;
+  status: DelegationStatus;
+  reason: string | null;
+  durationMs: number;
+  tokens: { input?: number; output?: number } | null;
+}
 
 export interface RunMeta {
   id: string;
@@ -19,6 +28,7 @@ export interface RunMeta {
   startedAt: string;
   durationMs: number;
   tokens: { input?: number; output?: number } | null;
+  attempts?: RunAttempt[];
   files: ChangedFile[];
   check: { command: NonNullable<Config["check"]>; code: number | null } | null;
 }
@@ -30,14 +40,28 @@ function runDir(dataDir: string, id: string): string {
   return join(dataDir, "runs", id);
 }
 
-export async function createRunDir(dataDir: string, id: string): Promise<string> {
-  const directory = runDir(dataDir, id);
+const artifacts = ["prompt.md", "setup.log", "engine.log", "check.log"];
+
+export function attemptDir(dataDir: string, id: string, attempt: number): string {
+  if (!Number.isSafeInteger(attempt) || attempt < 1) throw new Error("invalid attempt number");
+  return join(runDir(dataDir, id), `attempt-${attempt}`);
+}
+
+export async function createRunDir(dataDir: string, id: string, attempt?: number): Promise<string> {
+  const directory = attempt === undefined ? runDir(dataDir, id) : attemptDir(dataDir, id, attempt);
   await mkdir(directory, { recursive: true, mode: 0o700 });
-  for (const name of ["prompt.md", "setup.log", "engine.log", "check.log"]) {
+  for (const name of artifacts) {
     const file = await open(join(directory, name), "a", 0o600);
     await file.close();
   }
   return directory;
+}
+
+export async function publishRunArtifacts(dataDir: string, id: string, directory: string) {
+  const destination = await createRunDir(dataDir, id);
+  await Promise.all(
+    artifacts.map((name) => copyFile(join(directory, name), join(destination, name))),
+  );
 }
 
 export async function readMeta(dataDir: string, id: string): Promise<RunMeta> {
@@ -69,6 +93,7 @@ export async function writeMeta(dataDir: string, meta: RunMeta): Promise<void> {
     startedAt: meta.startedAt,
     durationMs: meta.durationMs,
     tokens: meta.tokens && { input: meta.tokens.input, output: meta.tokens.output },
+    attempts: meta.attempts,
     files: meta.files.map(({ path, added, deleted }) => ({ path, added, deleted })),
     check: meta.check && { command: meta.check.command, code: meta.check.code },
   };

@@ -12,6 +12,7 @@ vi.mock("../src/config.js", () => ({
       default: "fixture",
       engines: { fixture: { adapter: "generic", command: ["fixture"] } },
       check: ["check"],
+      retries: 1,
       worktree: { setup: ["setup"] },
       limits: { checkTimeoutMinutes: 10, timeoutMinutes: 20, maxSummaryChars: 8000 },
     },
@@ -29,7 +30,11 @@ vi.mock("../src/worktree.js", () => ({
   commitAll: async () => true,
   changes: async () => ({ files: [], diff: "", commits: 1 }),
 }));
-vi.mock("../src/runs.js", () => ({ createRunDir: async () => "/runs", writeMeta: vi.fn() }));
+vi.mock("../src/runs.js", () => ({
+  createRunDir: async () => "/runs",
+  publishRunArtifacts: vi.fn(),
+  writeMeta: vi.fn(),
+}));
 vi.mock("../src/check.js", () => ({
   parseCommand: (value: string[]) => value,
   runCommandIn: vi.fn(),
@@ -43,11 +48,13 @@ afterEach(() => vi.useRealTimers());
 test.each([
   true,
   false,
-])("sends progress every 30 seconds only when requested (%s)", async (requested) => {
+])("sends continuous progress across a retry only when requested (%s)", async (requested) => {
+  let checks = 0;
   vi.mocked(runCommandIn).mockImplementation(async (_cwd, [command]) => {
     const durationMs = command === "setup" ? 35_000 : 30_000;
     await delay(durationMs);
-    return { passed: true, code: 0, timedOut: false, durationMs, tail: [] };
+    const passed = command === "setup" || ++checks === 2;
+    return { passed, code: passed ? 0 : 1, timedOut: false, durationMs, tail: [] };
   });
   vi.mocked(run).mockImplementation(async () => {
     await delay(30_000);
@@ -77,7 +84,7 @@ test.each([
     const onprogress = vi.fn();
     const result = client.callTool(
       { name: "delegate", arguments: { prompt: "Make a change" } },
-      { timeout: 120_000, ...(requested ? { onprogress } : {}) },
+      { timeout: 180_000, ...(requested ? { onprogress } : {}) },
     );
     const progress = () =>
       send.mock.calls.flatMap(([message]) =>
@@ -88,18 +95,19 @@ test.each([
 
     await vi.advanceTimersByTimeAsync(29_999);
     expect(progress()).toEqual([]);
-    for (const seconds of [30, 60, 90]) {
+    const ticks = [30, 60, 90, 120, 150];
+    for (const seconds of ticks) {
       await vi.advanceTimersByTimeAsync(seconds === 30 ? 1 : 30_000);
-      expect(progress()).toEqual(requested ? [30, 60, 90].filter((value) => value <= seconds) : []);
+      expect(progress()).toEqual(requested ? ticks.filter((value) => value <= seconds) : []);
     }
     await vi.advanceTimersByTimeAsync(5_000);
     expect((await result).structuredContent).toMatchObject({
       status: "success",
-      durationMs: 95_000,
+      durationMs: 155_000,
     });
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(progress()).toEqual(requested ? [30, 60, 90] : []);
-    expect(onprogress).toHaveBeenCalledTimes(requested ? 3 : 0);
+    expect(progress()).toEqual(requested ? ticks : []);
+    expect(onprogress).toHaveBeenCalledTimes(requested ? ticks.length : 0);
   } finally {
     await client.close();
     await server.close();

@@ -66,14 +66,19 @@ async function linkDependency(repoRoot: string, worktreePath: string, link: stri
 export async function createWorktree(
   repoRoot: string,
   id: string,
-  { links }: { links: readonly string[] },
+  { links, base: revision = "HEAD" }: { links: readonly string[]; base?: string },
 ): Promise<{ id: string; path: string; branch: string; base: string; linked: string[] }> {
   if (!/^[a-z0-9_-]+$/i.test(id)) throw new Error(`Invalid worktree ID: ${id}`);
   const cwd = repoRoot;
-  const head = await git(["rev-parse", "--verify", "HEAD"], { cwd, allowFailure: true });
+  const head = await git(["rev-parse", "--verify", "--end-of-options", `${revision}^{commit}`], {
+    cwd,
+    allowFailure: true,
+  });
   if (head.code !== 0) {
     await git(["rev-parse", "--git-dir"], { cwd });
-    throw new Error("repository has no commits");
+    throw new Error(
+      revision === "HEAD" ? "repository has no commits" : `invalid base revision: ${revision}`,
+    );
   }
 
   const base = head.stdout.trim();

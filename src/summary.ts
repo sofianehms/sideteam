@@ -1,4 +1,5 @@
 import type { Config } from "./config.js";
+import type { RunAttempt } from "./runs.js";
 
 export type DelegationStatus = "success" | "check_failed" | "engine_failed" | "timeout";
 
@@ -21,6 +22,7 @@ export interface DelegationOutcome {
   base: string;
   diff: string;
   logPath: string;
+  attempts?: readonly RunAttempt[];
 }
 
 type SummaryLimits = Pick<Config["limits"], "diffLines" | "checkLines" | "maxSummaryChars">;
@@ -56,8 +58,14 @@ export function renderSummary(outcome: DelegationOutcome, limits: SummaryLimits)
     `Raw log: ${logPath}`,
     `Engine: ${engine}${model ? ` | Model: ${model}` : ""} | Duration: ${durationMs} ms`,
     ...(reason ? [`Reason: ${reason}`] : []),
-    "Files:",
   ];
+  let attemptsLine = outcome.attempts?.length
+    ? `Attempts: ${outcome.attempts.map(({ engine, attempt, status }) => `${engine}#${attempt} ${status}`).join(", ")}`
+    : "";
+  const conclusion =
+    attemptsLine && status !== "success"
+      ? ["all engines failed; consider doing this task directly"]
+      : [];
   const checkLabel = check
     ? `Check: ${typeof check.command === "string" ? check.command : JSON.stringify(check.command)} (code: ${check.code ?? "unavailable"})`
     : undefined;
@@ -82,6 +90,8 @@ export function renderSummary(outcome: DelegationOutcome, limits: SummaryLimits)
         : undefined;
     const text = [
       ...required,
+      ...(attemptsLine ? [attemptsLine] : []),
+      "Files:",
       ...fileLines.slice(0, fileCount),
       ...(omittedFiles ? [`… and ${omittedFiles} more`] : []),
       ...(checkLabel ? [checkLabel] : []),
@@ -89,6 +99,7 @@ export function renderSummary(outcome: DelegationOutcome, limits: SummaryLimits)
       ...(checkCount ? ["Check output:", ...checkLines] : []),
       ...(diffCount ? ["Diff:", ...diffLines] : []),
       ...(diffNote ? [diffNote] : []),
+      ...conclusion,
     ].join("\n");
     return { text, omittedFiles, checkLines, diffLines, diffNote };
   }
@@ -116,6 +127,12 @@ export function renderSummary(outcome: DelegationOutcome, limits: SummaryLimits)
       const remaining = engineMessage.length - (rendered.text.length - cap);
       engineMessage = truncate(engineMessage, remaining);
     }
+    rendered = render();
+  }
+
+  if (rendered.text.length > cap && attemptsLine) {
+    const remaining = attemptsLine.length - (rendered.text.length - cap);
+    attemptsLine = truncate(attemptsLine, Math.max("Attempts: …".length, remaining));
     rendered = render();
   }
 

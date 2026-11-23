@@ -63,16 +63,16 @@ Open Claude Code in a Git repository with at least one commit. Ask it to delegat
 | Tool | Parameters and result |
 | --- | --- |
 | `engines` | Optional boolean `detect` defaults to false. Lists configured engines, executable status, and configuration sources. A generic engine may show `unknown` until it is run. With `detect: true`, returns a JSON proposal and a suggested check when available. |
-| `delegate` | Required nonempty `prompt`. Optional `engine` names a configured entry. Optional `files` is a list of repository-relative paths to include as context. Optional string `check` overrides the project verification command for this run. Optional `timeoutMinutes` is greater than zero and at most 240. Returns a run ID, status, and compact summary with changed files, check output, and diff when available. |
+| `delegate` | Required nonempty `prompt`. Optional `engine` names a configured entry. Optional `files` is a list of repository-relative paths to include as context. Optional string `check` overrides the project verification command for this run. Optional `timeoutMinutes` is greater than zero and at most 240. Optional boolean `fallback` defaults to true. Returns a run ID, status, and compact summary with changed files, check output, and diff when available. |
 | `apply` | Required nonempty run `id`. Merges the delegation branch into the current branch and removes its worktree on success. A merge refusal leaves the run available for inspection. The tool treats approval as the caller’s responsibility, so only apply after review and a passing check. |
 | `discard` | Required nonempty run `id`. Removes the delegation worktree and branch without merging. |
 
 | Status | Meaning |
 | --- | --- |
 | `success` | The engine produced changes and the project check passed. Review before applying. |
-| `check_failed` | The check failed or timed out. Inspect its output and discard the run before retrying. |
+| `check_failed` | The last check failed. Inspect its output before discarding the run. |
 | `engine_failed` | The engine or setup failed, or the run produced no changes to check. Inspect the reason before discarding. |
-| `timeout` | The engine exceeded its time limit. Discard the run before retrying. |
+| `timeout` | The last engine or check exceeded its time limit. |
 
 <br/>
 
@@ -87,17 +87,22 @@ SideTeam reads global settings first. Project values override global values. The
 | `default` | Name of the engine to use when a call omits `engine`. A sole configured engine is selected automatically. With several engines and no default, choose one explicitly. |
 | `check` | Verification command, as a string or argument array. A call-level `check` takes precedence. A check is required for delegation. |
 | `engines` | Map of user-defined engine names to the settings below. |
-| `fallback` | Optional list of configured engine names. In this release, SideTeam validates the names and runs only the selected engine. |
+| `fallback` | Optional list of configured engine names to try in order after the selected engine. Each name is tried once in the chain, with its own retry budget. |
+| `retries` | Number of extra attempts per engine after a failed check. Use an integer from 0 to 3. The default is 1. |
 | `dataDir` | Storage for run metadata, prompts, and logs. Relative paths resolve against the configuration file that supplied the value. Defaults to `CLAUDE_PLUGIN_DATA` when set, then `$XDG_DATA_HOME/sideteam` (normally `~/.local/share/sideteam`) or `%LOCALAPPDATA%/sideteam` on Windows (normally `~/AppData/Local/sideteam`). Applying or discarding a run leaves these records in place. |
 | `worktree` | Worktree preparation settings. |
 | `worktree.link` | Existing repository-relative paths to link into the worktree. Absolute paths and parent segments are rejected. Defaults to `node_modules` and `.venv` when setup is absent, and to an empty list when setup is configured. An explicit empty list disables linking. |
-| `worktree.setup` | Optional command string or argument array run in the new worktree before the engine. A failure stops delegation before the engine starts. |
+| `worktree.setup` | Optional command string or argument array run in the new worktree before the engine. A failure skips that engine. |
 | `limits` | Default timeouts and summary limits. |
 | `limits.timeoutMinutes` | Engine timeout in minutes, default 20. Precedence is call `timeoutMinutes`, then engine `timeoutMinutes`, then this limit. |
 | `limits.checkTimeoutMinutes` | Time limit in minutes for each setup or verification command, default 10. |
 | `limits.diffLines` | Maximum diff lines in the summary, default 150. |
 | `limits.checkLines` | Number of output lines retained from the end of the check, default 40. |
 | `limits.maxSummaryChars` | Maximum summary length in characters, default 8,000. |
+
+A failed check triggers a retry in the same worktree with the original prompt and the tail of the check output. An engine failure or timeout advances directly to the next engine. Each fallback engine starts in a fresh worktree from the original base revision. Pass `fallback: false` to `delegate` to use only the selected engine. Its retry budget still applies.
+
+The summary lists the attempts in order. The full attempt history is in `runs/<id>/meta.json` under `dataDir`, with prompts and logs in `runs/<id>/attempt-<k>/` numbered across the whole run.
 
 Commands in `check` and `worktree.setup` run as a single executable without a shell. Put multi-step commands in a project script.
 
