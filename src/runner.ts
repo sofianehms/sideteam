@@ -17,6 +17,7 @@ type RunOptions = {
   onProgress?: (elapsedMs: number) => void;
   progressIntervalMs?: number;
   maxStdoutBytes?: number;
+  signal?: AbortSignal;
 };
 
 const stderrLimit = 64 * 1024;
@@ -51,6 +52,7 @@ export async function run(
     onProgress,
     progressIntervalMs = 30000,
     maxStdoutBytes = 10 * 1024 * 1024,
+    signal,
   }: RunOptions,
 ) {
   await mkdir(dirname(logFile), { recursive: true });
@@ -66,6 +68,7 @@ export async function run(
   let stderr = Buffer.alloc(0);
 
   try {
+    signal?.throwIfAborted();
     const child = spawn(cmd.bin, cmd.args, {
       cwd: cmd.cwd,
       env: cmd.env,
@@ -146,9 +149,15 @@ export async function run(
     });
     const timeout = setTimeout(() => {
       timedOut = true;
-      stop = Promise.resolve().then(() => stopTree(false));
+      stop ??= Promise.resolve().then(() => stopTree(false));
       void stop.catch(rejectTimeout);
     }, timeoutMs);
+    const abort = () => {
+      stop ??= stopTree(true);
+      void stop.catch(rejectTimeout);
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
     const progress =
       onProgress && setInterval(() => onProgress(performance.now() - started), progressIntervalMs);
 
@@ -172,6 +181,7 @@ export async function run(
       };
     } finally {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
       clearInterval(progress || undefined);
       cancelEscalation?.();
     }

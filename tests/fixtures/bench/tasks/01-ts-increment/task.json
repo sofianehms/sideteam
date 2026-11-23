@@ -1,0 +1,9 @@
+{
+  "id": "01-ts-increment",
+  "level": "easy",
+  "language": "ts",
+  "light": true,
+  "prompt": "Make increment add one to its input.",
+  "check": ["node", "--test", "visible.test.mjs"],
+  "hidden": ["node", "--test", "hidden/hidden.test.mjs"]
+}

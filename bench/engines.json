@@ -1,0 +1,5 @@
+{
+  "codex": { "adapter": "codex" },
+  "local": { "adapter": "opencode", "model": "ollama/qwen3-coder", "privacy": "local" },
+  "gemini": { "adapter": "gemini" }
+}

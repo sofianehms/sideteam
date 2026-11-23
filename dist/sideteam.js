@@ -29702,7 +29702,8 @@ async function run(cmd, {
   logFile,
   onProgress,
   progressIntervalMs = 3e4,
-  maxStdoutBytes = 10 * 1024 * 1024
+  maxStdoutBytes = 10 * 1024 * 1024,
+  signal
 }) {
   await mkdir3(dirname2(logFile), { recursive: true });
   const file2 = await open2(logFile, "w");
@@ -29716,6 +29717,7 @@ async function run(cmd, {
   const stdout = [];
   let stderr = Buffer.alloc(0);
   try {
+    signal?.throwIfAborted();
     const child = spawn2(cmd.bin, cmd.args, {
       cwd: cmd.cwd,
       env: cmd.env,
@@ -29728,7 +29730,7 @@ async function run(cmd, {
         child.once("error", (error48) => {
           spawnError = error48.code === "ENOENT" ? `not found: ${cmd.bin}` : error48.message;
         });
-        child.once("close", (code, signal) => resolve4({ code, signal }));
+        child.once("close", (code, signal2) => resolve4({ code, signal: signal2 }));
       }
     );
     child.stdout.pipe(log, { end: false });
@@ -29788,9 +29790,15 @@ async function run(cmd, {
     });
     const timeout = setTimeout(() => {
       timedOut = true;
-      stop = Promise.resolve().then(() => stopTree(false));
+      stop ??= Promise.resolve().then(() => stopTree(false));
       void stop.catch(rejectTimeout);
     }, timeoutMs);
+    const abort = () => {
+      stop ??= stopTree(true);
+      void stop.catch(rejectTimeout);
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
     const progress = onProgress && setInterval(() => onProgress(performance.now() - started), progressIntervalMs);
     try {
       const result = await Promise.race([closed, stopFailed]);
@@ -29812,6 +29820,7 @@ async function run(cmd, {
       };
     } finally {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
       clearInterval(progress || void 0);
       cancelEscalation?.();
     }
