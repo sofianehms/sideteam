@@ -1,0 +1,7 @@
+{"type":"step_start","part":{"type":"step-start"}}
+{"type":"text","part":{"type":"text","text":"I will update the file."}}
+{"type":"step_finish","part":{"type":"step-finish","reason":"tool-calls","tokens":{"input":12,"output":4,"reasoning":0,"cache":{"read":3,"write":0}}}}
+{"type":"step_start","part":{"type":"step-start"}}
+{"type":"text","part":{"type":"text","text":"Updated the file."}}
+{"type":"text","part":{"type":"text","text":"The change is ready for review."}}
+{"type":"step_finish","part":{"type":"step-finish","reason":"stop","tokens":{"input":8,"output":5,"reasoning":0,"cache":{"read":2,"write":1}}}}

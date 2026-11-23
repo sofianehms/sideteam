@@ -1,0 +1,9 @@
+{
+  "engines": {
+    "local": {
+      "adapter": "opencode",
+      "model": "ollama/qwen3-coder:30b",
+      "privacy": "local"
+    }
+  }
+}

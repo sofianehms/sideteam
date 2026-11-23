@@ -181,7 +181,7 @@ describe("Codex adapter", () => {
 });
 
 it("lists registered adapters and rejects unknown names", () => {
-  expect(adapterNames()).toEqual(["codex", "generic"]);
-  expect(allAdapters()).toEqual([adapter, getAdapter("generic")]);
-  expect(() => getAdapter("toString")).toThrow(/Known adapters: codex, generic/);
+  expect(adapterNames()).toEqual(["codex", "generic", "opencode"]);
+  expect(allAdapters()).toEqual([adapter, getAdapter("generic"), getAdapter("opencode")]);
+  expect(() => getAdapter("toString")).toThrow(/Known adapters: codex, generic, opencode/);
 });
