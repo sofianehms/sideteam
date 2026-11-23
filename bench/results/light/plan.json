@@ -10,5 +10,11 @@
   "09-ts-expiring-lru|A||1",
   "09-ts-expiring-lru|B|codex|1",
   "11-py-retry-backoff|A||1",
-  "11-py-retry-backoff|B|codex|1"
+  "11-py-retry-backoff|B|codex|1",
+  "01-ts-slugify|B|local|1",
+  "03-py-roman-numerals|B|local|1",
+  "05-ts-pagination|B|local|1",
+  "07-py-csv-quoting|B|local|1",
+  "09-ts-expiring-lru|B|local|1",
+  "11-py-retry-backoff|B|local|1"
 ]
