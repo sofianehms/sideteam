@@ -6,6 +6,5 @@
     "moduleResolution": "NodeNext",
     "noEmit": true
   },
-  "include": ["src", "tests", "scripts", "bench"],
-  "exclude": ["bench/tasks", "bench/.out"]
+  "include": ["src", "tests", "scripts"]
 }

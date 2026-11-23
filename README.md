@@ -140,7 +140,7 @@ For local Ollama use, see the [Ollama presets and setup notes](examples/README.m
 
 ## 📊 Benchmark
 
-The light series ran on 2026-11-23 with the [benchmark runner](bench/README.md). Arm A is Claude Code alone. Arm B is Claude Code with SideTeam loaded and permission to delegate to Codex. Raw trials and the generated summary are in [`bench/results/light/`](bench/results/light/results.md).
+The light series ran on 2026-11-23 with a separate benchmark runner. Arm A is Claude Code alone. Arm B is Claude Code with SideTeam loaded and permission to delegate to Codex.
 
 * 📅 Date: 2026-11-23T08:49:33.547Z (report generation).
 * 🧩 Coverage: 12/18 trials (partial). The `local` engine (OpenCode with Ollama) was not installed on the benchmark machine, so its 6 trials were skipped. Gemini is not part of the light series.
@@ -167,7 +167,7 @@ Limits:
 * 💵 Claude costs are API-equivalent estimates from Claude Code. The runs used a flat-rate Claude subscription, so no per-trial amount was billed.
 * ❔ Engine cost is unknown for subscriptions and local models. Codex ran on a ChatGPT subscription without a configured price, hence `engine cost n/a`.
 * 🖥️ No local model was measured, so no Ollama hardware applies to these results.
-* ⏳ The full series (144 planned trials) has started and resumes across sessions. Its partial state is in `bench/results/full/` and is not summarized here.
+* ⏳ The full series (144 planned trials) has started and resumes across sessions. Its partial state is not summarized here.
 
 <br/>
 

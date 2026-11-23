@@ -1,15 +1,6 @@
 {
   "files": {
-    "includes": [
-      "**",
-      "!**/dist",
-      "!**/coverage",
-      "!**/node_modules",
-      "!**/docs",
-      "!bench/tasks",
-      "!bench/.out",
-      "!bench/results"
-    ]
+    "includes": ["**", "!**/dist", "!**/coverage", "!**/node_modules", "!**/docs"]
   },
   "formatter": {
     "indentStyle": "space",

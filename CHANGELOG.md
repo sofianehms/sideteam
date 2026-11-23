@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+* Move the benchmark runner and its tasks out of the repository. The plugin is unchanged.
+
 ## 0.2.0
 
 * Retry failed checks and fall back to other configured engines.
