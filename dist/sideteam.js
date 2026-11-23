@@ -4547,8 +4547,8 @@ function az_default() {
 }
 
 // node_modules/zod/v4/locales/be.js
-function getBelarusianPlural(count, one, few, many) {
-  const absCount = Math.abs(count);
+function getBelarusianPlural(count2, one, few, many) {
+  const absCount = Math.abs(count2);
   const lastDigit = absCount % 10;
   const lastTwoDigits = absCount % 100;
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
@@ -6372,8 +6372,8 @@ function hu_default() {
 }
 
 // node_modules/zod/v4/locales/hy.js
-function getArmenianPlural(count, one, many) {
-  return Math.abs(count) === 1 ? one : many;
+function getArmenianPlural(count2, one, many) {
+  return Math.abs(count2) === 1 ? one : many;
 }
 function withDefiniteArticle(word) {
   if (!word)
@@ -8381,8 +8381,8 @@ function pt_default() {
 }
 
 // node_modules/zod/v4/locales/ru.js
-function getRussianPlural(count, one, few, many) {
-  const absCount = Math.abs(count);
+function getRussianPlural(count2, one, few, many) {
+  const absCount = Math.abs(count2);
   const lastDigit = absCount % 10;
   const lastTwoDigits = absCount % 100;
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
@@ -21322,15 +21322,15 @@ var require_resolve = /* @__PURE__ */ __commonJSMin(((exports) => {
     return false;
   }
   function countKeys(schema) {
-    let count = 0;
+    let count2 = 0;
     for (const key2 in schema) {
       if (key2 === "$ref") return Infinity;
-      count++;
+      count2++;
       if (SIMPLE_INLINED.has(key2)) continue;
-      if (typeof schema[key2] == "object") (0, util_1.eachItem)(schema[key2], (sch) => count += countKeys(sch));
-      if (count === Infinity) return Infinity;
+      if (typeof schema[key2] == "object") (0, util_1.eachItem)(schema[key2], (sch) => count2 += countKeys(sch));
+      if (count2 === Infinity) return Infinity;
     }
-    return count;
+    return count2;
   }
   function getFullPath(resolver, id = "", normalize) {
     if (normalize !== false) id = normalizeId(id);
@@ -24283,8 +24283,8 @@ var require_contains = /* @__PURE__ */ __commonJSMin(((exports) => {
       cxt.result(valid, () => cxt.reset());
       function validateItemsWithCount() {
         const schValid = gen.name("_valid");
-        const count = gen.let("count", 0);
-        validateItems(schValid, () => gen.if(schValid, () => checkLimits(count)));
+        const count2 = gen.let("count", 0);
+        validateItems(schValid, () => gen.if(schValid, () => checkLimits(count2)));
       }
       function validateItems(_valid, block) {
         gen.forRange("i", 0, len, (i) => {
@@ -24297,13 +24297,13 @@ var require_contains = /* @__PURE__ */ __commonJSMin(((exports) => {
           block();
         });
       }
-      function checkLimits(count) {
-        gen.code((0, codegen_1._)`${count}++`);
-        if (max === void 0) gen.if((0, codegen_1._)`${count} >= ${min}`, () => gen.assign(valid, true).break());
+      function checkLimits(count2) {
+        gen.code((0, codegen_1._)`${count2}++`);
+        if (max === void 0) gen.if((0, codegen_1._)`${count2} >= ${min}`, () => gen.assign(valid, true).break());
         else {
-          gen.if((0, codegen_1._)`${count} > ${max}`, () => gen.assign(valid, false).break());
+          gen.if((0, codegen_1._)`${count2} > ${max}`, () => gen.assign(valid, false).break());
           if (min === 1) gen.assign(valid, true);
-          else gen.if((0, codegen_1._)`${count} >= ${min}`, () => gen.assign(valid, true));
+          else gen.if((0, codegen_1._)`${count2} >= ${min}`, () => gen.assign(valid, true));
         }
       }
     }
@@ -27132,9 +27132,9 @@ var Server = class extends Protocol {
   _clientCapabilities;
   _clientVersion;
   static {
-    writeClientIdentity = (server, identity2) => {
-      if (identity2.clientCapabilities !== void 0) server._clientCapabilities = identity2.clientCapabilities;
-      if (identity2.clientInfo !== void 0) server._clientVersion = identity2.clientInfo;
+    writeClientIdentity = (server, identity3) => {
+      if (identity3.clientCapabilities !== void 0) server._clientCapabilities = identity3.clientCapabilities;
+      if (identity3.clientInfo !== void 0) server._clientVersion = identity3.clientInfo;
     };
     installDiscoverHandler = (server, servedModernVersions) => {
       const missing = servedModernVersions.filter((version2) => !server._supportedProtocolVersions.includes(version2));
@@ -27755,23 +27755,23 @@ function discoverAdvertisedCapabilities(capabilities) {
   return { ...capabilities };
 }
 function toolInputElementCount(value, max) {
-  let count = 0;
+  let count2 = 0;
   const stack = [value];
   while (stack.length > 0) {
     const node = stack.pop();
     if (node === null || typeof node !== "object") continue;
     if (Array.isArray(node)) for (const child of node) {
-      if (++count > max) return count;
+      if (++count2 > max) return count2;
       if (child !== null && typeof child === "object") stack.push(child);
     }
     else for (const key2 in node) {
       if (!Object.prototype.hasOwnProperty.call(node, key2)) continue;
-      if (++count > max) return count;
+      if (++count2 > max) return count2;
       const child = node[key2];
       if (child !== null && typeof child === "object") stack.push(child);
     }
   }
-  return count;
+  return count2;
 }
 function resolveMaxToolInputElements(value) {
   if (value === void 0 || value === Infinity) return void 0;
@@ -28515,8 +28515,8 @@ var StdioServerTransport = class {
 var DEFAULT_MAX_REQUEST_BODY_SIZE = 4 * 1024 * 1024;
 
 // src/apply.ts
-import { readFile as readFile3, realpath } from "node:fs/promises";
-import { join as join3 } from "node:path";
+import { readFile as readFile4, realpath } from "node:fs/promises";
+import { join as join4 } from "node:path";
 
 // src/config.ts
 import { readFileSync } from "node:fs";
@@ -28925,6 +28925,67 @@ function git(args, { cwd, allowFailure = false }) {
   });
 }
 
+// src/journal.ts
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+var count = external_exports.number().int().nonnegative();
+var tokenCount = count.optional().catch(void 0);
+var identity = {
+  ts: external_exports.iso.datetime(),
+  id: external_exports.string().min(1)
+};
+var journalEvent = external_exports.discriminatedUnion("type", [
+  external_exports.object({
+    ...identity,
+    type: external_exports.literal("delegation"),
+    repo: external_exports.string(),
+    engine: external_exports.string(),
+    adapter: external_exports.string(),
+    model: external_exports.string().nullable(),
+    status: external_exports.enum(["success", "check_failed", "engine_failed", "timeout"]),
+    attempts: count,
+    durationMs: count,
+    files: count,
+    added: count,
+    deleted: count,
+    tokens: external_exports.object({ input: tokenCount, output: tokenCount, cached: tokenCount }).nullable()
+  }),
+  external_exports.object({ ...identity, type: external_exports.literal("apply") }),
+  external_exports.object({ ...identity, type: external_exports.literal("discard") })
+]);
+async function appendEvent(dataDir2, event) {
+  const record2 = journalEvent.parse(event);
+  if (record2.type === "delegation" && Object.values(record2.tokens ?? {}).every((value) => value === void 0)) {
+    record2.tokens = null;
+  }
+  await mkdir(dataDir2, { recursive: true, mode: 448 });
+  const file2 = join(dataDir2, "journal.jsonl");
+  const existing = await readFile(file2, "utf8").catch(() => "");
+  const prefix = existing !== "" && !existing.endsWith("\n") ? "\n" : "";
+  await appendFile(file2, `${prefix}${JSON.stringify(record2)}
+`, { mode: 384 });
+}
+async function readEvents(dataDir2) {
+  const events = [];
+  let malformed = 0;
+  const contents = await readFile(join(dataDir2, "journal.jsonl"), "utf8").catch(
+    (error48) => {
+      if (error48.code === "ENOENT") return "";
+      throw error48;
+    }
+  );
+  const lines = contents.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  for (const line of lines) {
+    try {
+      events.push(journalEvent.parse(JSON.parse(line)));
+    } catch {
+      malformed++;
+    }
+  }
+  return { events, malformed };
+}
+
 // src/prompt.ts
 var instructionSeparator = "\n\nInstruction:\n";
 function promptInstruction(framed) {
@@ -28951,24 +29012,24 @@ function framePrompt({
 
 // src/runs.ts
 import { randomUUID } from "node:crypto";
-import { copyFile, mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { copyFile, mkdir as mkdir2, open, readFile as readFile2, rename, rm, writeFile } from "node:fs/promises";
+import { join as join2 } from "node:path";
 function runDir(dataDir2, id) {
   if (!id || id === "." || id === ".." || /[\\/:]/.test(id)) {
     throw new Error(`unknown delegation ${id}`);
   }
-  return join(dataDir2, "runs", id);
+  return join2(dataDir2, "runs", id);
 }
 var artifacts = ["prompt.md", "setup.log", "engine.log", "check.log"];
 function attemptDir(dataDir2, id, attempt) {
   if (!Number.isSafeInteger(attempt) || attempt < 1) throw new Error("invalid attempt number");
-  return join(runDir(dataDir2, id), `attempt-${attempt}`);
+  return join2(runDir(dataDir2, id), `attempt-${attempt}`);
 }
 async function createRunDir(dataDir2, id, attempt) {
   const directory2 = attempt === void 0 ? runDir(dataDir2, id) : attemptDir(dataDir2, id, attempt);
-  await mkdir(directory2, { recursive: true, mode: 448 });
+  await mkdir2(directory2, { recursive: true, mode: 448 });
   for (const name5 of artifacts) {
-    const file2 = await open(join(directory2, name5), "a", 384);
+    const file2 = await open(join2(directory2, name5), "a", 384);
     await file2.close();
   }
   return directory2;
@@ -28976,12 +29037,12 @@ async function createRunDir(dataDir2, id, attempt) {
 async function publishRunArtifacts(dataDir2, id, directory2) {
   const destination = await createRunDir(dataDir2, id);
   await Promise.all(
-    artifacts.map((name5) => copyFile(join(directory2, name5), join(destination, name5)))
+    artifacts.map((name5) => copyFile(join2(directory2, name5), join2(destination, name5)))
   );
 }
 async function readMeta(dataDir2, id) {
   try {
-    return JSON.parse(await readFile(join(runDir(dataDir2, id), "meta.json"), "utf8"));
+    return JSON.parse(await readFile2(join2(runDir(dataDir2, id), "meta.json"), "utf8"));
   } catch (error48) {
     if (error48.code === "ENOENT") {
       throw new Error(`unknown delegation ${id}`);
@@ -28991,7 +29052,7 @@ async function readMeta(dataDir2, id) {
 }
 async function writeMeta(dataDir2, meta3) {
   const directory2 = runDir(dataDir2, meta3.id);
-  const temporary = join(directory2, `meta-${randomUUID()}.tmp`);
+  const temporary = join2(directory2, `meta-${randomUUID()}.tmp`);
   const record2 = {
     id: meta3.id,
     repo: meta3.repo,
@@ -29021,7 +29082,7 @@ async function writeMeta(dataDir2, meta3) {
     throw error48;
   });
   try {
-    await rename(temporary, join(directory2, "meta.json"));
+    await rename(temporary, join2(directory2, "meta.json"));
   } finally {
     await rm(temporary, { force: true });
   }
@@ -29029,10 +29090,10 @@ async function writeMeta(dataDir2, meta3) {
 
 // src/worktree.ts
 import { randomBytes } from "node:crypto";
-import { appendFile, lstat, mkdir as mkdir2, readFile as readFile2, stat, symlink } from "node:fs/promises";
-import { dirname, join as join2, posix as posix3, resolve as resolve2, win32 as win324 } from "node:path";
+import { appendFile as appendFile2, lstat, mkdir as mkdir3, readFile as readFile3, stat, symlink } from "node:fs/promises";
+import { dirname, join as join3, posix as posix3, resolve as resolve2, win32 as win324 } from "node:path";
 var directory = ".sideteam";
-var identity = ["-c", "user.name=SideTeam", "-c", "user.email=sideteam@localhost"];
+var identity2 = ["-c", "user.name=SideTeam", "-c", "user.email=sideteam@localhost"];
 function newId() {
   return `st-${randomBytes(4).toString("hex")}`;
 }
@@ -29046,11 +29107,11 @@ async function ifMissing(operation) {
 async function ensureExcluded(repoRoot) {
   const { stdout } = await git(["rev-parse", "--git-common-dir"], { cwd: repoRoot });
   const file2 = resolve2(repoRoot, stdout.replace(/\r?\n$/, ""), "info", "exclude");
-  const contents = await ifMissing(readFile2(file2, "utf8")) ?? "";
+  const contents = await ifMissing(readFile3(file2, "utf8")) ?? "";
   const entry = `${directory}/`;
   if (contents.split(/\r?\n/).includes(entry)) return;
-  await mkdir2(dirname(file2), { recursive: true });
-  await appendFile(file2, `${contents && !contents.endsWith("\n") ? "\n" : ""}${entry}
+  await mkdir3(dirname(file2), { recursive: true });
+  await appendFile2(file2, `${contents && !contents.endsWith("\n") ? "\n" : ""}${entry}
 `);
 }
 async function linkDependency(repoRoot, worktreePath, link) {
@@ -29064,12 +29125,12 @@ async function linkDependency(repoRoot, worktreePath, link) {
   const name5 = parts.pop();
   let parent = worktreePath;
   for (const part of parts) {
-    parent = join2(parent, part);
+    parent = join3(parent, part);
     const entry = await ifMissing(lstat(parent));
     if (entry && !entry.isDirectory()) return;
-    if (!entry) await mkdir2(parent);
+    if (!entry) await mkdir3(parent);
   }
-  const destination = join2(parent, name5);
+  const destination = join3(parent, name5);
   if (await ifMissing(lstat(destination))) return;
   const type = sourceStat.isDirectory() ? process.platform === "win32" ? "junction" : "dir" : "file";
   await symlink(source, destination, type);
@@ -29092,12 +29153,12 @@ async function createWorktree(repoRoot, id, { links, base: revision = "HEAD" }) 
   const branch = `sideteam/${id}`;
   let parent = resolve2(repoRoot);
   for (const part of [directory, "wt"]) {
-    parent = join2(parent, part);
+    parent = join3(parent, part);
     const entry = await ifMissing(lstat(parent));
     if (entry && !entry.isDirectory()) throw new Error(`Expected a directory: ${parent}`);
-    if (!entry) await mkdir2(parent);
+    if (!entry) await mkdir3(parent);
   }
-  const path = join2(parent, id);
+  const path = join3(parent, id);
   if (await ifMissing(lstat(path))) throw new Error(`Worktree path already exists: ${path}`);
   await ensureExcluded(repoRoot);
   await git(["worktree", "add", "-b", branch, "--", path, base2], { cwd });
@@ -29120,7 +29181,7 @@ async function withIdentity(args, cwd) {
     if (!(error48 instanceof GitError) || !/Author identity unknown|Committer identity unknown/.test(error48.stderr)) {
       throw error48;
     }
-    return git([...identity, ...args], { cwd });
+    return git([...identity2, ...args], { cwd });
   }
 }
 async function commitAll(worktreePath, message, { exclude }) {
@@ -29143,7 +29204,7 @@ function paths(output) {
 async function changes(repoRoot, base2, branch) {
   const cwd = repoRoot;
   const range = `${base2}..${branch}`;
-  const [stats, diff, count] = await Promise.all([
+  const [stats, diff, count2] = await Promise.all([
     git(["diff", "--no-renames", "--numstat", "-z", range, "--"], { cwd }),
     git(["diff", range, "--"], { cwd }),
     git(["rev-list", "--count", range, "--"], { cwd })
@@ -29160,7 +29221,7 @@ async function changes(repoRoot, base2, branch) {
       binary: added === "-"
     };
   });
-  return { files, diff: diff.stdout, commits: Number(count.stdout) };
+  return { files, diff: diff.stdout, commits: Number(count2.stdout) };
 }
 async function mergeIntoCurrent(repoRoot, { base: base2, branch, message }) {
   const cwd = repoRoot;
@@ -29228,6 +29289,18 @@ async function removeWorktree(repoRoot, { path, branch }, mode) {
 }
 
 // src/apply.ts
+async function recordOutcome(directory2, type, id) {
+  try {
+    const { events } = await readEvents(directory2);
+    if (!events.some((event) => event.type === type && event.id === id)) {
+      await appendEvent(directory2, { type, ts: (/* @__PURE__ */ new Date()).toISOString(), id });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+var JOURNAL_WARNING = " (journal unavailable: the event will be recorded on the next apply or discard retry)";
 var activeRepos = /* @__PURE__ */ new Set();
 async function finalizeRun(id, env, operation) {
   const root = await git(["rev-parse", "--show-toplevel"], {
@@ -29252,9 +29325,10 @@ async function finalizeRun(id, env, operation) {
 function applyDelegation(id, env = process.env) {
   return finalizeRun(id, env, async ({ directory: directory2, meta: meta3 }) => {
     if (meta3.status === "applied" || meta3.status === "discarded") {
+      await recordOutcome(directory2, meta3.status === "applied" ? "apply" : "discard", id);
       throw new Error(`Delegation ${id} is already ${meta3.status}`);
     }
-    const prompt = await readFile3(join3(directory2, "runs", id, "prompt.md"), "utf8");
+    const prompt = await readFile4(join4(directory2, "runs", id, "prompt.md"), "utf8");
     const instruction = promptInstruction(prompt);
     const title = Array.from(instruction.split(/\r?\n/, 1)[0]).slice(0, 60).join("");
     const result = await mergeIntoCurrent(meta3.repo, {
@@ -29267,17 +29341,22 @@ function applyDelegation(id, env = process.env) {
     }
     await removeWorktree(meta3.repo, { path: meta3.worktree, branch: meta3.branch }, "merged");
     await writeMeta(directory2, { ...meta3, status: "applied" });
-    return `Applied ${id}: merge commit ${result.commit}, ${meta3.files.length} files`;
+    const recorded = await recordOutcome(directory2, "apply", id);
+    return `Applied ${id}: merge commit ${result.commit}, ${meta3.files.length} files${recorded ? "" : JOURNAL_WARNING}`;
   });
 }
 function discardDelegation(id, env = process.env) {
   return finalizeRun(id, env, async ({ directory: directory2, meta: meta3 }) => {
-    if (meta3.status === "applied") throw new Error(`Delegation ${id} is already applied`);
+    if (meta3.status === "applied") {
+      await recordOutcome(directory2, "apply", id);
+      throw new Error(`Delegation ${id} is already applied`);
+    }
     if (meta3.status !== "discarded") {
       await removeWorktree(meta3.repo, { path: meta3.worktree, branch: meta3.branch }, "force");
       await writeMeta(directory2, { ...meta3, status: "discarded" });
     }
-    return `Discarded ${id}`;
+    const recorded = await recordOutcome(directory2, "discard", id);
+    return `Discarded ${id}${recorded ? "" : JOURNAL_WARNING}`;
   });
 }
 
@@ -29304,12 +29383,12 @@ function registerApply(server) {
 
 // src/delegate.ts
 import { realpath as realpath2, stat as stat2, writeFile as writeFile2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute2, join as join5, relative, resolve as resolve3, sep } from "node:path";
+import { isAbsolute as isAbsolute2, join as join6, relative, resolve as resolve3, sep } from "node:path";
 
 // src/adapters/codex.ts
 import { execFile } from "node:child_process";
 import { readFileSync as readFileSync2 } from "node:fs";
-import { join as join4 } from "node:path";
+import { join as join5 } from "node:path";
 import { promisify } from "node:util";
 var name2 = "codex";
 var versionTimeoutMs = 15e3;
@@ -29364,7 +29443,7 @@ var codexAdapter = {
       job.worktree,
       "--json",
       "-o",
-      join4(job.runDir, lastMessageFile)
+      join5(job.runDir, lastMessageFile)
     ];
     const model = job.model ?? cfg.model;
     if (model !== void 0) args.push("-m", model);
@@ -29407,7 +29486,7 @@ var codexAdapter = {
       }
     }
     try {
-      message = readFileSync2(join4(raw.runDir, lastMessageFile), "utf8");
+      message = readFileSync2(join5(raw.runDir, lastMessageFile), "utf8");
     } catch {
     }
     const ok = raw.code === 0 && !raw.timedOut && !raw.signal && raw.spawnError === void 0 && !turnFailed;
@@ -29673,7 +29752,7 @@ import { finished as finished2 } from "node:stream/promises";
 
 // src/runner.ts
 import { spawn as spawn2 } from "node:child_process";
-import { mkdir as mkdir3, open as open2 } from "node:fs/promises";
+import { mkdir as mkdir4, open as open2 } from "node:fs/promises";
 import { dirname as dirname2 } from "node:path";
 import { finished } from "node:stream/promises";
 var stderrLimit = 64 * 1024;
@@ -29705,7 +29784,7 @@ async function run(cmd, {
   maxStdoutBytes = 10 * 1024 * 1024,
   signal
 }) {
-  await mkdir3(dirname2(logFile), { recursive: true });
+  await mkdir4(dirname2(logFile), { recursive: true });
   const file2 = await open2(logFile, "w");
   const log = file2.createWriteStream();
   const windows2 = process.platform === "win32";
@@ -29874,16 +29953,16 @@ async function runCommandIn(worktree, value, { timeoutMs, logFile, lines }) {
   if (lines > 0) {
     const input = createReadStream(logFile);
     const reader = createInterface({ input, crlfDelay: Infinity });
-    let count = 0;
+    let count2 = 0;
     reader.on("error", () => {
     });
     reader.on("line", (line) => {
-      tail[count % lines] = line;
-      count += 1;
+      tail[count2 % lines] = line;
+      count2 += 1;
     });
     await finished2(input);
-    if (count > lines) {
-      const start = count % lines;
+    if (count2 > lines) {
+      const start = count2 % lines;
       tail = tail.slice(start).concat(tail.slice(0, start));
     }
   }
@@ -30037,7 +30116,7 @@ async function runAttempt({
   prepare,
   env
 }) {
-  const logPath = join5(runDir2, "engine.log");
+  const logPath = join6(runDir2, "engine.log");
   const checkOptions = {
     timeoutMs: config2.limits.checkTimeoutMinutes * 6e4,
     lines: config2.limits.checkLines
@@ -30049,13 +30128,13 @@ async function runAttempt({
   if (prepare && config2.worktree.setup !== void 0) {
     const setup = await runCommandIn(worktree.path, config2.worktree.setup, {
       ...checkOptions,
-      logFile: join5(runDir2, "setup.log"),
+      logFile: join6(runDir2, "setup.log"),
       lines: 0
     });
     if (!setup.passed) reason = `worktree setup failed (exit ${setup.code})`;
   }
   if (reason === null) {
-    const promptFile = join5(runDir2, "prompt.md");
+    const promptFile = join6(runDir2, "prompt.md");
     await writeFile2(promptFile, prompt);
     try {
       const adapter = getAdapter(cfg.adapter);
@@ -30091,7 +30170,7 @@ async function runAttempt({
     } else if (diff.code === 1) {
       const checked = await runCommandIn(worktree.path, command, {
         ...checkOptions,
-        logFile: join5(runDir2, "check.log")
+        logFile: join6(runDir2, "check.log")
       });
       check2 = { command, code: checked.code, tail: checked.tail };
       status = checked.timedOut ? "timeout" : checked.passed ? "success" : "check_failed";
@@ -30209,6 +30288,22 @@ async function runDelegation(input, {
         files: changed.files,
         check: check2 ? { command, code: check2.code } : null
       });
+      await appendEvent(directory2, {
+        type: "delegation",
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        id,
+        repo,
+        engine: selected,
+        adapter: cfg.adapter,
+        model: cfg.model ?? null,
+        status,
+        attempts: attempts.length,
+        durationMs,
+        files: changed.files.length,
+        added: changed.files.reduce((total, file2) => total + file2.added, 0),
+        deleted: changed.files.reduce((total, file2) => total + file2.deleted, 0),
+        tokens
+      });
       return renderSummary(
         {
           id,
@@ -30299,7 +30394,7 @@ import { execFile as execFile4 } from "node:child_process";
 
 // src/detect.ts
 import { existsSync, readFileSync as readFileSync3 } from "node:fs";
-import { join as join6 } from "node:path";
+import { join as join7 } from "node:path";
 async function detectAll({
   adapters: adapters2,
   env,
@@ -30323,15 +30418,15 @@ async function detectAll({
 }
 function guessCheck(repoRoot) {
   try {
-    const pkg = JSON.parse(readFileSync3(join6(repoRoot, "package.json"), "utf8"));
+    const pkg = JSON.parse(readFileSync3(join7(repoRoot, "package.json"), "utf8"));
     if (typeof pkg?.scripts?.test === "string") return "npm test";
   } catch {
   }
-  if (existsSync(join6(repoRoot, "pyproject.toml")) || existsSync(join6(repoRoot, "pytest.ini"))) {
+  if (existsSync(join7(repoRoot, "pyproject.toml")) || existsSync(join7(repoRoot, "pytest.ini"))) {
     return "pytest";
   }
-  if (existsSync(join6(repoRoot, "Cargo.toml"))) return "cargo test";
-  if (existsSync(join6(repoRoot, "go.mod"))) return "go test ./...";
+  if (existsSync(join7(repoRoot, "Cargo.toml"))) return "cargo test";
+  if (existsSync(join7(repoRoot, "go.mod"))) return "go test ./...";
   return void 0;
 }
 
@@ -30438,16 +30533,122 @@ function registerEngines(server) {
   );
 }
 
+// src/tools/stats.ts
+import { realpath as realpath3 } from "node:fs/promises";
+
+// src/stats.ts
+function computeStats(events, { sinceDays, repo, now }) {
+  const cutoff = now - sinceDays * 864e5;
+  const inWindow = events.filter(({ ts }) => {
+    const time3 = Date.parse(ts);
+    return time3 >= cutoff && time3 <= now;
+  });
+  const applied = new Set(inWindow.filter(({ type }) => type === "apply").map(({ id }) => id));
+  const engines = /* @__PURE__ */ new Map();
+  for (const event of inWindow) {
+    if (event.type !== "delegation" || repo !== null && event.repo !== repo) continue;
+    const { engine, id, durationMs, status, tokens } = event;
+    let group = engines.get(engine);
+    if (!group) {
+      group = {
+        row: {
+          engine,
+          delegations: 0,
+          successes: 0,
+          failedChecks: 0,
+          failedEngines: 0,
+          timeouts: 0,
+          successRate: 0,
+          medianDurationMs: 0,
+          tokens: 0,
+          tokenReports: 0,
+          applications: 0
+        },
+        durations: []
+      };
+      engines.set(engine, group);
+    }
+    const { row, durations } = group;
+    durations.push(durationMs);
+    row.delegations++;
+    if (status === "success") row.successes++;
+    if (status === "check_failed") row.failedChecks++;
+    if (status === "engine_failed") row.failedEngines++;
+    if (status === "timeout") row.timeouts++;
+    if (tokens?.input !== void 0 || tokens?.output !== void 0 || tokens?.cached !== void 0) {
+      row.tokens += (tokens.input ?? 0) + (tokens.output ?? 0);
+      row.tokenReports++;
+    }
+    if (applied.has(id)) row.applications++;
+  }
+  return [...engines.values()].sort((a, b) => a.row.engine.localeCompare(b.row.engine)).map(({ row, durations }) => {
+    durations.sort((a, b) => a - b);
+    const middle = Math.floor(durations.length / 2);
+    row.medianDurationMs = (durations[Math.floor((durations.length - 1) / 2)] + durations[middle]) / 2;
+    row.successRate = row.successes / row.delegations;
+    return row;
+  });
+}
+function renderStats(rows, malformed) {
+  const header = "| Engine | Delegations | Successes | Failed checks | Failed engines | Timeouts | Success rate | Median (ms) | Tokens | Token reports | Applied |";
+  const table = rows.map((row) => {
+    const name5 = row.engine.replace(/[|\\]/g, "/").replace(/\s+/g, " ").trim();
+    const engine = name5.length > 64 ? `${name5.slice(0, 63)}\u2026` : name5;
+    return `| ${engine} | ${row.delegations} | ${row.successes} | ${row.failedChecks} | ${row.failedEngines} | ${row.timeouts} | ${(row.successRate * 100).toFixed(1)}% | ${row.medianDurationMs} | ${row.tokens} | ${row.tokenReports} | ${row.applications} |`;
+  });
+  return [
+    ...rows.length ? [header, "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |", ...table] : ["No delegations in the selected period and repository."],
+    "",
+    `Malformed journal lines ignored: ${malformed}`
+  ].join("\n");
+}
+
+// src/tools/stats.ts
+function registerStats(server) {
+  server.registerTool(
+    "stats",
+    {
+      description: "Show delegation statistics by engine for the last 30 days by default.",
+      inputSchema: external_exports.object({
+        sinceDays: external_exports.number().positive().optional(),
+        repo: external_exports.enum(["current", "all"]).optional()
+      })
+    },
+    async ({ sinceDays = 30, repo = "current" }) => {
+      try {
+        const cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+        const root = await git(["rev-parse", "--show-toplevel"], { cwd, allowFailure: true });
+        if (root.code !== 0 && repo === "current") throw new Error("not inside a git repository");
+        const repoRoot = root.code === 0 ? await realpath3(root.stdout.replace(/\r?\n$/, "")) : cwd;
+        const { config: config2 } = loadConfig({ repoRoot });
+        const { events, malformed } = await readEvents(dataDir(config2));
+        const rows = computeStats(events, {
+          sinceDays,
+          repo: repo === "current" ? repoRoot : null,
+          now: Date.now()
+        });
+        return { content: [{ type: "text", text: renderStats(rows, malformed) }] };
+      } catch (error48) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error48 instanceof Error ? error48.message : String(error48) }]
+        };
+      }
+    }
+  );
+}
+
 // src/server.ts
 function createServer() {
   const server = new McpServer(
-    { name: "sideteam", version: "0.1.0" },
+    { name: "sideteam", version: "0.2.0" },
     { capabilities: { tools: {} } }
   );
   registerDelegate(server);
   registerApply(server);
   registerDiscard(server);
   registerEngines(server);
+  registerStats(server);
   return server;
 }
 

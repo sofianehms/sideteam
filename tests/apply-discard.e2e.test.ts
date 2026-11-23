@@ -1,10 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { readEvents } from "../src/journal.js";
 import { readMeta } from "../src/runs.js";
 import { createServer } from "../src/server.js";
 import { connectMcpClient } from "./helpers/mcp-client.js";
@@ -263,3 +264,28 @@ test("finalizes runs through the server in process", async () => {
     vi.unstubAllGlobals();
   }
 });
+
+for (const [name, status, other] of [
+  ["apply", "applied", "discard"],
+  ["discard", "discarded", "apply"],
+] as const) {
+  test(`keeps the ${name} outcome when the journal is unavailable and records it on retry`, async () => {
+    const meta = await delegate();
+    const journal = join(dataDir, "journal.jsonl");
+    const saved = await readFile(journal, "utf8");
+    await rm(journal);
+    await mkdir(journal);
+    const result = await call(name, meta.id);
+    expect(result?.isError).toBeFalsy();
+    expect(result?.content).toEqual([
+      { type: "text", text: expect.stringContaining("journal unavailable") },
+    ]);
+    await expectRemoved(meta, status);
+    await rm(journal, { recursive: true });
+    await writeFile(journal, saved);
+    expect(Boolean((await call(name, meta.id))?.isError)).toBe(name === "apply");
+    const { events } = await readEvents(dataDir);
+    expect(events.filter((event) => event.type === name && event.id === meta.id)).toHaveLength(1);
+    expect(events.some((event) => event.type === other)).toBe(false);
+  });
+}
