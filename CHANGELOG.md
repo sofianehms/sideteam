@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-* Move the benchmark runner and its tasks out of the repository. The plugin is unchanged.
+* Move the benchmark runner and its tasks out of the repository.
+* Estimate Claude token savings and measurement coverage from local transcripts in `/sideteam:stats`.
 
 ## 0.2.0
 

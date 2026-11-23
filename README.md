@@ -68,7 +68,7 @@ Open Claude Code in a Git repository with at least one commit. Ask it to delegat
 | `delegate` | Required nonempty `prompt`. Optional `engine` names a configured entry. Optional `files` is a list of repository-relative paths to include as context. Optional string `check` overrides the project verification command for this run. Optional `timeoutMinutes` is greater than zero and at most 240. Optional boolean `fallback` defaults to true. Returns a run ID, status, and compact summary with changed files, check output, and diff when available. |
 | `apply` | Required nonempty run `id`. Merges the delegation branch into the current branch and removes its worktree on success. A merge refusal leaves the run available for inspection. The tool treats approval as the caller’s responsibility, so only apply after review and a passing check. |
 | `discard` | Required nonempty run `id`. Removes the delegation worktree and branch without merging. |
-| `stats` | Optional positive `sinceDays` defaults to 30. Optional `repo` defaults to `"current"`. Use `"all"` for every repository in the active journal. Returns counts by outcome, success rate, median duration, reported input and output tokens and how many runs reported them, and applications. |
+| `stats` | Optional positive `sinceDays` defaults to 30. Optional `repo` defaults to `"current"`. Use `"all"` for every repository in the active journal. Returns outcomes, success rate, median duration, reported tokens, applications, and estimated Claude token savings with measurement coverage. |
 
 | Status | Meaning |
 | --- | --- |
@@ -77,7 +77,9 @@ Open Claude Code in a Git repository with at least one commit. Ask it to delegat
 | `engine_failed` | The engine or setup failed, or the run produced no changes to check. Inspect the reason before discarding. |
 | `timeout` | The last engine or check exceeded its time limit. |
 
-Run `/sideteam:stats` in Claude Code to see the table. SideTeam stores events in `<dataDir>/journal.jsonl` and reports the number of malformed lines it skipped. Each completed delegation is counted once under its final engine. The duration includes retries and fallbacks, and tokens come from the final attempt. Applications count selected delegations applied within the same time window.
+Run `/sideteam:stats` in Claude Code to see the statistics. SideTeam stores events in `<dataDir>/journal.jsonl` and reports the number of malformed lines it skipped. Each completed delegation is counted once under its final engine. The duration includes retries and fallbacks, and tokens come from the final attempt. Applications count selected delegations applied within the same time window.
+
+**Token savings.** SideTeam subtracts the Claude output used to call the delegation tools and the input added by each delegation summary from the engine's reported output tokens. It estimates the summary input from the change in input usage including cache tokens, or rounds up one token per four characters when that change is unavailable or shared with other input. Engine input is informational. The table shows measured runs out of all selected runs and requires a matching transcript and reported engine output. Estimates can be negative and use engine output as a proxy for work avoided. SideTeam reads local transcripts without storing or returning their contents.
 
 <br/>
 
@@ -85,7 +87,7 @@ Run `/sideteam:stats` in Claude Code to see the table. SideTeam stores events in
 
 Set project options in `.sideteam.json` at the repository root. Global configuration lives at `$XDG_CONFIG_HOME/sideteam/config.json`, with a default of `~/.config/sideteam/config.json`. On Windows, use `%APPDATA%/sideteam/config.json`, with a default of `~/AppData/Roaming/sideteam/config.json`.
 
-SideTeam reads global settings first. Project values override global values. The `engines`, `worktree`, and `limits` objects merge one level deep. A project engine of the same name replaces the entire global entry. Arrays are replaced, including link lists. Unknown fields in the merged configuration are rejected.
+SideTeam reads global settings first. Project values override global values. The `engines`, `worktree`, `limits`, and `savings` objects merge one level deep. A project engine of the same name replaces the entire global entry. Arrays are replaced, including link lists. Unknown fields in the merged configuration are rejected.
 
 | Field | Meaning |
 | --- | --- |
@@ -104,6 +106,8 @@ SideTeam reads global settings first. Project values override global values. The
 | `limits.diffLines` | Maximum diff lines in the summary, default 150. |
 | `limits.checkLines` | Number of output lines retained from the end of the check, default 40. |
 | `limits.maxSummaryChars` | Maximum summary length in characters, default 8,000. |
+| `savings.enabled` | Read transcripts to estimate token savings. Defaults to `true`. Set to `false` to skip transcript reading. |
+| `savings.transcriptsDir` | Local transcript projects directory. Defaults to `$CLAUDE_CONFIG_DIR/projects` if set, or `~/.claude/projects`. Relative overrides resolve from the configuration file that supplies the value. |
 
 A failed check triggers a retry in the same worktree with the original prompt and the tail of the check output. An engine failure or timeout advances directly to the next engine. Each fallback engine starts in a fresh worktree from the original base revision. Pass `fallback: false` to `delegate` to use only the selected engine. Its retry budget still applies.
 

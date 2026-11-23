@@ -1,0 +1,18 @@
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"a","content":[{"type":"tool_use","id":"tool-a","name":"mcp__plugin_sideteam_sideteam__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":3,"input_tokens":10,"cache_creation_input_tokens":80,"cache_read_input_tokens":10}}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"a","content":[{"type":"tool_use","id":"tool-a","name":"mcp__plugin_sideteam_sideteam__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":8,"input_tokens":10,"cache_creation_input_tokens":80,"cache_read_input_tokens":10}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-a","content":[{"type":"text","text":"SideTeam applied: SUCCESS\nPRIVATE_TRANSCRIPT_MARKER"}]}]}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"b","content":[{"type":"tool_use","id":"tool-b","name":"mcp__sideteam__apply","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":5,"input_tokens":15,"cache_creation_input_tokens":5,"cache_read_input_tokens":100}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-b","content":[{"type":"text","text":"Applied applied: merge commit acb, 1 files"}]}]}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"c","content":[{"type":"tool_use","id":"tool-c","name":"mcp__plugin_sideteam_sideteam__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":10,"input_tokens":20,"cache_creation_input_tokens":5,"cache_read_input_tokens":110}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-c","content":[{"type":"text","text":"SideTeam retried: SUCCESS\nAttempts: editor#1 check_failed, editor#2 success"}]}]}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"d","content":[{"type":"tool_use","id":"tool-d","name":"mcp__plugin_sideteam_sideteam__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":7,"input_tokens":30,"cache_creation_input_tokens":5,"cache_read_input_tokens":110}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-d","content":[{"type":"text","text":"SideTeam discarded: CHECK_FAILED\nPRIVATE_TRANSCRIPT_MARKER"}]}]}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"e","content":[{"type":"tool_use","id":"tool-e","name":"mcp__plugin_sideteam_sideteam__discard","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":6}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-e","content":[{"type":"text","text":"Discarded discarded"}]}]}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"f","content":[{"type":"tool_use","id":"tool-f","name":"mcp__plugin_sideteam_sideteam__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":3,"input_tokens":40,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-f","content":[{"type":"text","text":"SideTeam unknown: SUCCESS"}]}]}}
+{"type":"assistant","cwd":"PROJECT_CWD","message":{"id":"g","content":[{"type":"tool_use","id":"tool-g","name":"mcp__unrelated__delegate","input":{"prompt":"PRIVATE_TRANSCRIPT_MARKER"}}],"usage":{"output_tokens":30,"input_tokens":50,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-g","content":[{"type":"text","text":"SideTeam unmatched: SUCCESS"}]}]}}
+{broken
+{"type":"unknown-type"}
+{"type":"assistant","message":{}}

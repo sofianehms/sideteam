@@ -18153,14 +18153,14 @@ function inputRequiredRoundsExceededMessage(method, maxRounds) {
   return `Multi-round-trip request '${method}' still required input after ${maxRounds} rounds (inputRequired.maxRounds)`;
 }
 function sleep(ms, signal) {
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve5, reject) => {
     if (signal?.aborted) {
       reject(signal.reason instanceof SdkError ? signal.reason : new SdkError(SdkErrorCode.RequestTimeout, String(signal.reason)));
       return;
     }
     const timer = setTimeout(() => {
       signal?.removeEventListener("abort", onAbort);
-      resolve4();
+      resolve5();
     }, ms);
     const onAbort = () => {
       clearTimeout(timer);
@@ -18956,7 +18956,7 @@ var Protocol = class {
     const flowStartedAt = Date.now();
     let onAbort;
     let cleanupMessageId;
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       const earlyReject = (error48) => {
         reject(error48);
       };
@@ -19025,7 +19025,7 @@ var Protocol = class {
         }
         if (decoded.kind === "invalid") return reject(decoded.error);
         if (decoded.kind === "input_required") {
-          if (options?.allowInputRequired === true) return resolve4(manualInputRequiredValue(decoded));
+          if (options?.allowInputRequired === true) return resolve5(manualInputRequiredValue(decoded));
           const flow = {
             codec: codec2,
             request,
@@ -19037,11 +19037,11 @@ var Protocol = class {
               params
             }, resultSchema, legOptions)
           };
-          return resolve4(this._resolveNonCompleteResult(decoded, flow));
+          return resolve5(this._resolveNonCompleteResult(decoded, flow));
         }
         const result = decoded.result;
         validateStandardSchema(resultSchema, result).then((parseResult) => {
-          if (parseResult.success) resolve4(parseResult.data);
+          if (parseResult.success) resolve5(parseResult.data);
           else reject(new SdkError(SdkErrorCode.InvalidResult, `Invalid result for ${request.method}: ${parseResult.error}`));
         }, reject);
       });
@@ -21957,7 +21957,7 @@ var require_compile = /* @__PURE__ */ __commonJSMin(((exports) => {
     ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, ref);
     const schOrFunc = root.refs[ref];
     if (schOrFunc) return schOrFunc;
-    let _sch = resolve4.call(this, root, ref);
+    let _sch = resolve5.call(this, root, ref);
     if (_sch === void 0) {
       const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
       const { schemaId } = this.opts;
@@ -21983,7 +21983,7 @@ var require_compile = /* @__PURE__ */ __commonJSMin(((exports) => {
   function sameSchemaEnv(s1, s2) {
     return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
   }
-  function resolve4(root, ref) {
+  function resolve5(root, ref) {
     let sch;
     while (typeof (sch = this.refs[ref]) == "string") ref = sch;
     return sch || this.schemas[ref] || resolveSchema.call(this, root, ref);
@@ -22678,7 +22678,7 @@ var require_fast_uri = /* @__PURE__ */ __commonJSMin(((exports, module) => {
     else if (typeof uri === "object") uri = parse3(serialize(uri, options), options);
     return uri;
   }
-  function resolve4(baseURI, relativeURI, options) {
+  function resolve5(baseURI, relativeURI, options) {
     const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
     const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed, malformedPercentEncoding: baseMalformedPercentEncoding, malformedSchemeSpecific: baseMalformedSchemeSpecific, malformedHost: baseMalformedHost, malformedScheme: baseMalformedScheme } = parseWithStatus(baseURI, schemelessOptions);
     const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed, malformedPercentEncoding: relativeMalformedPercentEncoding, malformedSchemeSpecific: relativeMalformedSchemeSpecific, malformedHost: relativeMalformedHost, malformedScheme: relativeMalformedScheme } = parseWithStatus(relativeURI, schemelessOptions);
@@ -22960,7 +22960,7 @@ var require_fast_uri = /* @__PURE__ */ __commonJSMin(((exports, module) => {
   const fastUri = {
     SCHEMES,
     normalize,
-    resolve: resolve4,
+    resolve: resolve5,
     resolveComponent,
     equal,
     serialize,
@@ -26831,15 +26831,15 @@ var PerRequestHTTPServerTransport = class {
     };
     if (isJSONRPCRequest(message)) {
       this._requestId = message.id;
-      let resolve4;
+      let resolve5;
       let reject;
       const promise2 = new Promise((promiseResolve, promiseReject) => {
-        resolve4 = promiseResolve;
+        resolve5 = promiseResolve;
         reject = promiseReject;
       });
       this._deferredResponse = {
         promise: promise2,
-        resolve: resolve4,
+        resolve: resolve5,
         reject,
         settled: false
       };
@@ -27844,9 +27844,9 @@ var McpServer = class {
   resolveScopeChallenge = (context) => {
     switch (context.request.method) {
       case "tools/call": {
-        const toolName = context.request.params?.name;
-        if (typeof toolName !== "string") return;
-        const tool = this._registeredTools[toolName];
+        const toolName2 = context.request.params?.name;
+        if (typeof toolName2 !== "string") return;
+        const tool = this._registeredTools[toolName2];
         if (tool === void 0 || !tool.enabled) return;
         return tool.scopeChallenge?.(context);
       }
@@ -27930,23 +27930,23 @@ var McpServer = class {
   /**
   * Validates tool input arguments against the tool's input schema.
   */
-  async validateToolInput(tool, args, toolName) {
-    if (this._maxToolInputElements !== void 0 && toolInputElementCount(args, this._maxToolInputElements) > this._maxToolInputElements) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Invalid arguments for tool ${toolName}: arguments contain more than the maximum of ${this._maxToolInputElements} elements`);
+  async validateToolInput(tool, args, toolName2) {
+    if (this._maxToolInputElements !== void 0 && toolInputElementCount(args, this._maxToolInputElements) > this._maxToolInputElements) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Invalid arguments for tool ${toolName2}: arguments contain more than the maximum of ${this._maxToolInputElements} elements`);
     if (!tool.inputSchema) return;
     const parseResult = await validateStandardSchema(tool.inputSchema, args ?? {});
-    if (!parseResult.success) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Input validation error: Invalid arguments for tool ${toolName}: ${parseResult.error}`);
+    if (!parseResult.success) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Input validation error: Invalid arguments for tool ${toolName2}: ${parseResult.error}`);
     return parseResult.data;
   }
   /**
   * Validates tool output against the tool's output schema.
   */
-  async validateToolOutput(tool, result, toolName) {
+  async validateToolOutput(tool, result, toolName2) {
     if (!tool.outputSchema) return;
     if (isInputRequiredResult(result)) return;
     if (result.isError) return;
-    if (result.structuredContent === void 0) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Output validation error: Tool ${toolName} has an output schema but no structured content was provided`);
+    if (result.structuredContent === void 0) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Output validation error: Tool ${toolName2} has an output schema but no structured content was provided`);
     const parseResult = await validateStandardSchema(tool.outputSchema, result.structuredContent);
-    if (!parseResult.success) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Output validation error: Invalid structured content for tool ${toolName}: ${parseResult.error}`);
+    if (!parseResult.success) throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Output validation error: Invalid structured content for tool ${toolName2}: ${parseResult.error}`);
   }
   /**
   * Executes a tool handler.
@@ -28483,7 +28483,7 @@ var StdioServerTransport = class {
   }
   send(message) {
     if (this._closed) return Promise.reject(/* @__PURE__ */ new Error("StdioServerTransport is closed"));
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       const json2 = serializeMessage(message);
       let settled = false;
       const onError = (error48) => {
@@ -28498,14 +28498,14 @@ var StdioServerTransport = class {
         settled = true;
         this._stdout.off("error", onError);
         this._stdout.off("drain", onDrain);
-        resolve4();
+        resolve5();
       };
       this._stdout.once("error", onError);
       if (this._stdout.write(json2)) {
         if (settled) return;
         settled = true;
         this._stdout.off("error", onError);
-        resolve4();
+        resolve5();
       } else if (!settled) this._stdout.once("drain", onDrain);
     });
   }
@@ -28520,6 +28520,7 @@ import { join as join4 } from "node:path";
 
 // src/config.ts
 import { readFileSync } from "node:fs";
+import { homedir as homedir2 } from "node:os";
 import { posix as posix2, win32 as win323 } from "node:path";
 
 // src/env.ts
@@ -28734,7 +28735,11 @@ var configSchema = external_exports.strictObject({
   retries: external_exports.number().int().min(0).max(3).default(1),
   dataDir: external_exports.string().optional(),
   worktree: worktreeSchema,
-  limits: limitsSchema
+  limits: limitsSchema,
+  savings: external_exports.strictObject({
+    enabled: external_exports.boolean(),
+    transcriptsDir: external_exports.string().min(1)
+  })
 });
 var ConfigError = class extends Error {
   constructor(file2, key2, message) {
@@ -28830,17 +28835,27 @@ function loadConfig({
   const projectPath = projectConfigPath(repoRoot, { platform });
   const global = readConfig(globalPath);
   const project = readConfig(projectPath);
+  const path = platform === "win32" ? win323 : posix2;
+  const environment = env ?? process.env;
+  const home = (platform === "win32" ? environment.USERPROFILE : environment.HOME) || homedir2();
   const merged = {
     ...global,
     ...project,
     engines: mergeSection(global?.engines, project?.engines),
     worktree: mergeSection(global?.worktree, project?.worktree),
-    limits: mergeSection(global?.limits, project?.limits, defaultLimits)
+    limits: mergeSection(global?.limits, project?.limits, defaultLimits),
+    savings: mergeSection(global?.savings, project?.savings, {
+      enabled: true,
+      transcriptsDir: path.resolve(
+        environment.CLAUDE_CONFIG_DIR || path.join(home, ".claude"),
+        "projects"
+      )
+    })
   };
   function sourceFor(key2) {
     const [section, field] = key2;
     const projectSection = project?.[String(section)];
-    const fromProject = field !== void 0 && ["engines", "worktree", "limits"].includes(String(section)) ? isObject2(projectSection) && Object.hasOwn(projectSection, field) : project !== void 0 && Object.hasOwn(project, section);
+    const fromProject = field !== void 0 && ["engines", "worktree", "limits", "savings"].includes(String(section)) ? isObject2(projectSection) && Object.hasOwn(projectSection, field) : project !== void 0 && Object.hasOwn(project, section);
     return fromProject ? projectPath : globalPath;
   }
   function invalid(key2, message) {
@@ -28853,10 +28868,13 @@ function loadConfig({
     invalid(key2, issue2.message);
   }
   const config2 = result.data;
-  const path = platform === "win32" ? win323 : posix2;
   if (config2.dataDir !== void 0 && !path.isAbsolute(config2.dataDir)) {
     const file2 = sourceFor(["dataDir"]);
     config2.dataDir = path.resolve(path.dirname(file2), config2.dataDir);
+  }
+  if (!path.isAbsolute(config2.savings.transcriptsDir)) {
+    const file2 = sourceFor(["savings", "transcriptsDir"]);
+    config2.savings.transcriptsDir = path.resolve(path.dirname(file2), config2.savings.transcriptsDir);
   }
   if (config2.default !== void 0 && !Object.hasOwn(config2.engines, config2.default)) {
     invalid(["default"], "Unknown engine");
@@ -28900,7 +28918,7 @@ var GitError = class extends Error {
   stderr;
 };
 function git(args, { cwd, allowFailure = false }) {
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve5, reject) => {
     const child = spawn("git", args, {
       cwd,
       env: { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "C" },
@@ -28920,7 +28938,7 @@ function git(args, { cwd, allowFailure = false }) {
     });
     child.on("close", (code) => {
       if (code !== 0 && !allowFailure) reject(new GitError(args, code, stderr));
-      else resolve4({ code, stdout, stderr });
+      else resolve5({ code, stdout, stderr });
     });
   });
 }
@@ -29771,9 +29789,9 @@ function killWindowsTree(pid) {
     windowsHide: true,
     stdio: "ignore"
   });
-  return new Promise((resolve4) => {
-    killer.once("error", () => resolve4(false));
-    killer.once("close", (code) => resolve4(code === 0));
+  return new Promise((resolve5) => {
+    killer.once("error", () => resolve5(false));
+    killer.once("close", (code) => resolve5(code === 0));
   });
 }
 async function run(cmd, {
@@ -29805,11 +29823,11 @@ async function run(cmd, {
       detached: !windows2
     });
     const closed = new Promise(
-      (resolve4) => {
+      (resolve5) => {
         child.once("error", (error48) => {
           spawnError = error48.code === "ENOENT" ? `not found: ${cmd.bin}` : error48.message;
         });
-        child.once("close", (code, signal2) => resolve4({ code, signal: signal2 }));
+        child.once("close", (code, signal2) => resolve5({ code, signal: signal2 }));
       }
     );
     child.stdout.pipe(log, { end: false });
@@ -29840,18 +29858,18 @@ async function run(cmd, {
         return Promise.resolve();
       }
       if (!signalGroup(pid, "SIGTERM")) return Promise.resolve();
-      return new Promise((resolve4, reject) => {
+      return new Promise((resolve5, reject) => {
         const timer = setTimeout(() => {
           try {
             signalGroup(pid, "SIGKILL");
-            resolve4();
+            resolve5();
           } catch (error48) {
             reject(error48);
           }
         }, 5e3);
         cancelEscalation = () => {
           clearTimeout(timer);
-          resolve4();
+          resolve5();
         };
       });
     };
@@ -30435,9 +30453,9 @@ var checkTimeoutMs = 15e3;
 async function checkEngine(check2) {
   let timer;
   try {
-    const timeout = new Promise((resolve4) => {
+    const timeout = new Promise((resolve5) => {
       timer = setTimeout(
-        () => resolve4({ ok: false, message: "Check timed out after 15 s" }),
+        () => resolve5({ ok: false, message: "Check timed out after 15 s" }),
         checkTimeoutMs
       );
     });
@@ -30473,9 +30491,9 @@ async function inspectEngines({ detect }, cwd = process.cwd()) {
   if (detect) {
     const env = buildEngineEnv([]);
     const filter = discoveryFilter(env);
-    const run2 = (bin, args, timeout) => new Promise((resolve4) => {
+    const run2 = (bin, args, timeout) => new Promise((resolve5) => {
       execFile4(bin, args, { cwd: repoRoot, env, timeout, windowsHide: true }, (error48, stdout) => {
-        resolve4({
+        resolve5({
           code: error48 ? typeof error48.code === "number" ? error48.code : null : 0,
           stdout: filter(stdout)
         });
@@ -30534,15 +30552,19 @@ function registerEngines(server) {
 }
 
 // src/tools/stats.ts
-import { realpath as realpath3 } from "node:fs/promises";
+import { realpath as realpath4 } from "node:fs/promises";
 
 // src/stats.ts
-function computeStats(events, { sinceDays, repo, now }) {
+function eventsInWindow(events, { sinceDays, now }) {
   const cutoff = now - sinceDays * 864e5;
-  const inWindow = events.filter(({ ts }) => {
+  return events.filter(({ ts }) => {
     const time3 = Date.parse(ts);
     return time3 >= cutoff && time3 <= now;
   });
+}
+function computeStats(events, window) {
+  const { repo } = window;
+  const inWindow = eventsInWindow(events, window);
   const applied = new Set(inWindow.filter(({ type }) => type === "apply").map(({ id }) => id));
   const engines = /* @__PURE__ */ new Map();
   for (const event of inWindow) {
@@ -30589,11 +30611,14 @@ function computeStats(events, { sinceDays, repo, now }) {
     return row;
   });
 }
+function engineLabel(engine) {
+  const name5 = engine.replace(/[|\\]/g, "/").replace(/\s+/g, " ").trim();
+  return name5.length > 64 ? `${name5.slice(0, 63)}\u2026` : name5;
+}
 function renderStats(rows, malformed) {
   const header = "| Engine | Delegations | Successes | Failed checks | Failed engines | Timeouts | Success rate | Median (ms) | Tokens | Token reports | Applied |";
   const table = rows.map((row) => {
-    const name5 = row.engine.replace(/[|\\]/g, "/").replace(/\s+/g, " ").trim();
-    const engine = name5.length > 64 ? `${name5.slice(0, 63)}\u2026` : name5;
+    const engine = engineLabel(row.engine);
     return `| ${engine} | ${row.delegations} | ${row.successes} | ${row.failedChecks} | ${row.failedEngines} | ${row.timeouts} | ${(row.successRate * 100).toFixed(1)}% | ${row.medianDurationMs} | ${row.tokens} | ${row.tokenReports} | ${row.applications} |`;
   });
   return [
@@ -30603,12 +30628,290 @@ function renderStats(rows, malformed) {
   ].join("\n");
 }
 
+// src/transcripts.ts
+import { createReadStream as createReadStream2 } from "node:fs";
+import { readdir, realpath as realpath3 } from "node:fs/promises";
+import { isAbsolute as isAbsolute3, join as join8, resolve as resolve4 } from "node:path";
+import { createInterface as createInterface2 } from "node:readline";
+var transcriptTokenCount = external_exports.number().int().nonnegative().optional().catch(void 0);
+var transcriptUsageSchema = external_exports.object({
+  input_tokens: transcriptTokenCount,
+  output_tokens: transcriptTokenCount,
+  cache_creation_input_tokens: transcriptTokenCount,
+  cache_read_input_tokens: transcriptTokenCount
+});
+var transcriptBlockSchema = external_exports.object({
+  type: external_exports.string(),
+  id: external_exports.string().optional(),
+  name: external_exports.string().optional(),
+  tool_use_id: external_exports.string().optional(),
+  content: external_exports.unknown()
+}).refine(({ type, id, name: name5, tool_use_id, content }) => {
+  if (type === "tool_use") return !!id && !!name5;
+  if (type === "tool_result") return !!tool_use_id && content !== void 0;
+  return true;
+});
+var transcriptEntrySchema = external_exports.object({
+  type: external_exports.string(),
+  cwd: external_exports.string().optional(),
+  message: external_exports.unknown()
+});
+var assistantMessageSchema = external_exports.object({
+  id: external_exports.string().optional(),
+  content: external_exports.array(transcriptBlockSchema),
+  usage: transcriptUsageSchema.optional().catch(void 0)
+});
+var userMessageSchema = external_exports.object({
+  content: external_exports.union([external_exports.string(), external_exports.array(transcriptBlockSchema)])
+});
+var metadataTypes = /* @__PURE__ */ new Set([
+  "summary",
+  "system",
+  "progress",
+  "file-history-snapshot",
+  "queue-operation",
+  "custom-title",
+  "tag",
+  "attachment",
+  "pr-link"
+]);
+var toolName = /(?:^|__)(?:sideteam|plugin_[^_]+_sideteam)__(delegate|apply|discard)$/;
+function resultFrom(content, tool, ids) {
+  const texts = typeof content === "string" ? [content] : [];
+  if (Array.isArray(content)) {
+    for (const item of content) {
+      if (item?.type === "text" && typeof item.text === "string") texts.push(item.text);
+    }
+  }
+  for (const text of texts) {
+    const id = tool === "delegate" ? /^SideTeam ([^\s:]+):/.exec(text)?.[1] : /^(?:Applied|Discarded|Cannot apply|Delegation) ([^\s:]+)/.exec(text)?.[1];
+    if (id && ids.has(id)) {
+      return { id, tool, characters: texts.reduce((length, part) => length + part.length, 0) };
+    }
+  }
+}
+async function readSession(file2, repo, ids) {
+  const frames = [];
+  const messages = /* @__PURE__ */ new Map();
+  const calls = /* @__PURE__ */ new Map();
+  const seenResults = /* @__PURE__ */ new Set();
+  let malformed = 0;
+  let scoped = repo === null;
+  const stream = createReadStream2(file2, { encoding: "utf8" });
+  const lines = createInterface2({ input: stream, crlfDelay: Infinity });
+  try {
+    for await (const line of lines) {
+      let json2;
+      try {
+        json2 = JSON.parse(line);
+      } catch {
+        malformed++;
+        continue;
+      }
+      const parsed = transcriptEntrySchema.safeParse(json2);
+      if (!parsed.success) {
+        malformed++;
+        continue;
+      }
+      const { type, cwd, message } = parsed.data;
+      if (!scoped && cwd && isAbsolute3(cwd)) {
+        const sessionCwd = await realpath3(cwd).catch(() => resolve4(cwd));
+        if (sessionCwd !== repo) return;
+        scoped = true;
+      }
+      if (!scoped && (type === "assistant" || type === "user")) continue;
+      if (type === "assistant") {
+        const parsedMessage = assistantMessageSchema.safeParse(message);
+        if (!parsedMessage.success) {
+          malformed++;
+          continue;
+        }
+        const { id, content, usage } = parsedMessage.data;
+        let record2 = id ? messages.get(id) : void 0;
+        if (!record2) {
+          record2 = { runs: /* @__PURE__ */ new Set() };
+          if (id) messages.set(id, record2);
+          frames.push({ assistant: record2 });
+        }
+        if (usage?.input_tokens !== void 0) {
+          record2.input = usage.input_tokens + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
+        }
+        record2.output = usage?.output_tokens ?? record2.output;
+        for (const { type: type2, id: id2, name: name5 } of content) {
+          if (type2 !== "tool_use" || !id2 || !name5) continue;
+          const tool = toolName.exec(name5)?.[1];
+          if (tool) calls.set(id2, { tool, assistant: record2 });
+        }
+      } else if (type === "user") {
+        const parsedMessage = userMessageSchema.safeParse(message);
+        if (!parsedMessage.success) {
+          malformed++;
+          continue;
+        }
+        const { content } = parsedMessage.data;
+        const results = [];
+        let otherContent = typeof content === "string";
+        if (Array.isArray(content)) {
+          for (const { type: type2, tool_use_id, content: payload } of content) {
+            if (type2 !== "tool_result") {
+              otherContent = true;
+              continue;
+            }
+            if (tool_use_id) {
+              if (seenResults.has(tool_use_id)) continue;
+              seenResults.add(tool_use_id);
+            }
+            const call = tool_use_id ? calls.get(tool_use_id) : void 0;
+            const result = call ? resultFrom(payload, call.tool, ids) : void 0;
+            if (result && call) call.assistant.runs.add(result.id);
+            results.push(result);
+          }
+        }
+        frames.push({ results, otherContent });
+      } else if (!metadataTypes.has(type)) {
+        malformed++;
+      }
+    }
+  } catch {
+    return;
+  } finally {
+    lines.close();
+    stream.destroy();
+  }
+  if (!scoped) return;
+  return { frames, malformed };
+}
+function accumulateCost(frames, costs) {
+  function costFor(id) {
+    let cost = costs.get(id);
+    if (!cost) {
+      cost = { output: 0, input: 0, delegated: false, incomplete: false };
+      costs.set(id, cost);
+    }
+    return cost;
+  }
+  let previousInput;
+  let results = [];
+  let otherContent = false;
+  function chargeResults(nextInput) {
+    const delta = results.length === 1 && !otherContent && nextInput !== void 0 && previousInput !== void 0 ? nextInput - previousInput : -1;
+    for (const result of results) {
+      if (result?.tool !== "delegate") continue;
+      const cost = costFor(result.id);
+      cost.delegated = true;
+      cost.input += delta >= 0 ? delta : Math.ceil(result.characters / 4);
+    }
+    results = [];
+    otherContent = false;
+  }
+  for (const frame of frames) {
+    if ("assistant" in frame) {
+      const { runs, output, input } = frame.assistant;
+      chargeResults(input);
+      previousInput = input;
+      if (!runs.size) continue;
+      let remainder = (output ?? 0) % runs.size;
+      for (const id of runs) {
+        const cost = costFor(id);
+        if (output === void 0) cost.incomplete = true;
+        else cost.output += Math.floor(output / runs.size) + (remainder-- > 0 ? 1 : 0);
+      }
+    } else {
+      results.push(...frame.results);
+      otherContent ||= frame.otherContent;
+    }
+  }
+  chargeResults();
+}
+async function readTranscriptCosts(directory2, repo, ids) {
+  const costs = /* @__PURE__ */ new Map();
+  let readable = 0;
+  let malformed = 0;
+  const projectName = repo?.replace(/[^a-zA-Z0-9-]/g, "-");
+  const projects = await readdir(directory2, { withFileTypes: true }).catch(() => []);
+  for (const project of projects) {
+    if (!project.isDirectory() || projectName !== void 0 && project.name !== projectName) {
+      continue;
+    }
+    const path = join8(directory2, project.name);
+    const sessions = await readdir(path, { withFileTypes: true }).catch(() => []);
+    for (const session of sessions) {
+      if (!session.isFile() || !session.name.endsWith(".jsonl")) continue;
+      const result = await readSession(join8(path, session.name), repo, ids);
+      if (!result) continue;
+      readable++;
+      malformed += result.malformed;
+      accumulateCost(result.frames, costs);
+    }
+  }
+  return { costs, readable, malformed };
+}
+
+// src/savings.ts
+function savingsRow() {
+  return { measured: 0, total: 0, output: 0, input: 0, engineInput: 0, avoided: 0 };
+}
+async function renderSavings(events, window, config2) {
+  if (!config2.enabled) return "Estimated token savings disabled.";
+  const ids = new Set(events.filter(({ type }) => type === "delegation").map(({ id }) => id));
+  const { costs, readable, malformed } = await readTranscriptCosts(
+    config2.transcriptsDir,
+    window.repo,
+    ids
+  );
+  if (!readable)
+    return "Estimated token savings unavailable: no matching transcripts could be read.";
+  const engines = /* @__PURE__ */ new Map();
+  const total = savingsRow();
+  for (const event of eventsInWindow(events, window)) {
+    if (event.type !== "delegation" || window.repo !== null && event.repo !== window.repo)
+      continue;
+    let row = engines.get(event.engine);
+    if (!row) {
+      row = savingsRow();
+      engines.set(event.engine, row);
+    }
+    const cost = costs.get(event.id);
+    for (const target of [row, total]) {
+      target.total++;
+      if (!cost?.delegated || cost.incomplete || event.tokens?.output === void 0) continue;
+      target.measured++;
+      target.output += cost.output;
+      target.input += cost.input;
+      target.engineInput += event.tokens.input ?? 0;
+      target.avoided += event.tokens.output;
+    }
+  }
+  function format(engine, row) {
+    const cells = [
+      engine,
+      `${row.measured} / ${row.total}`,
+      row.output,
+      row.input,
+      row.engineInput,
+      row.avoided,
+      row.avoided - row.output - row.input
+    ];
+    return `| ${cells.join(" | ")} |`;
+  }
+  return [
+    "Estimated Claude token savings",
+    "",
+    "| Engine | Measured / Total | Claude output | Claude input | Engine input (reported) | Work avoided | Estimated savings |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...[...engines].sort(([a], [b]) => a.localeCompare(b)).map(([engine, row]) => format(engineLabel(engine), row)),
+    format("**Total**", total),
+    "",
+    `Malformed or unknown transcript lines ignored: ${malformed}`
+  ].join("\n");
+}
+
 // src/tools/stats.ts
 function registerStats(server) {
   server.registerTool(
     "stats",
     {
-      description: "Show delegation statistics by engine for the last 30 days by default.",
+      description: "Show delegation statistics and estimated token savings for the last 30 days by default.",
       inputSchema: external_exports.object({
         sinceDays: external_exports.number().positive().optional(),
         repo: external_exports.enum(["current", "all"]).optional()
@@ -30619,15 +30922,21 @@ function registerStats(server) {
         const cwd = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
         const root = await git(["rev-parse", "--show-toplevel"], { cwd, allowFailure: true });
         if (root.code !== 0 && repo === "current") throw new Error("not inside a git repository");
-        const repoRoot = root.code === 0 ? await realpath3(root.stdout.replace(/\r?\n$/, "")) : cwd;
+        const repoRoot = root.code === 0 ? await realpath4(root.stdout.replace(/\r?\n$/, "")) : cwd;
         const { config: config2 } = loadConfig({ repoRoot });
         const { events, malformed } = await readEvents(dataDir(config2));
-        const rows = computeStats(events, {
+        const window = {
           sinceDays,
           repo: repo === "current" ? repoRoot : null,
           now: Date.now()
-        });
-        return { content: [{ type: "text", text: renderStats(rows, malformed) }] };
+        };
+        const rows = computeStats(events, window);
+        const savings = await renderSavings(events, window, config2.savings);
+        return {
+          content: [{ type: "text", text: `${renderStats(rows, malformed)}
+
+${savings}` }]
+        };
       } catch (error48) {
         return {
           isError: true,
