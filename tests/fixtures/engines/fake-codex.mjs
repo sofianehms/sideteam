@@ -2,6 +2,9 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
+if (Object.hasOwn(process.env, "SIDETEAM_TEST_SECRET")) {
+  throw new Error("Unexpected variable in engine environment");
+}
 if (args.length === 1 && args[0] === "--version") {
   console.log("codex-cli 1.2.3");
   process.exit(0);
